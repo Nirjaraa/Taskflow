@@ -7,10 +7,18 @@
   }
 
   model User {
-    id           Int      @id @default(autoincrement())
-    email        String   @unique
-    passwordHash String
-    name         String
-    avatarUrl    String?
-    createdAt    DateTime @default(now())
-  }
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String
+  passwordHash String
+  avatarUrl    String?
+
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  token     String   @id
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+}
