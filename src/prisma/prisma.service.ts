@@ -8,6 +8,13 @@ config();
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private _passwordResetToken: any;
+  public get passwordResetToken(): any {
+    return this._passwordResetToken;
+  }
+  public set passwordResetToken(value: any) {
+    this._passwordResetToken = value;
+  }
   constructor() {
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,

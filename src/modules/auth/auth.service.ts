@@ -1,7 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -40,4 +40,45 @@ export class AuthService {
    async validateUser(userId: number) {
     return this.prisma.user.findUnique({ where: { id: userId } });
   }
+    async updateProfile(userId: number, data: { name?: string; avatarUrl?: string }) {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+    return updated;
+  }
+    async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) return; 
+
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 1000 * 60 * 60); 
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt: expires,
+      },
+    });
+
+    // TODO: send email with link containing token
+    console.log(`Password reset link: https://yourfrontend.com/reset-password?token=${token}`);
+  }
+   async resetPassword(token: string, newPassword: string) {
+    const record = await this.prisma.passwordResetToken.findUnique({ where: { token } });
+    if (!record || record.expiresAt < new Date()) throw new BadRequestException('Invalid or expired token');
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: record.userId },
+      data: { passwordHash: hashedPassword },
+    });
+
+    await this.prisma.passwordResetToken.delete({ where: { token } });
+
+    return { message: 'Password reset successfully' };
+  }
 }
+  
