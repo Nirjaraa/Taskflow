@@ -14,6 +14,8 @@
   avatarUrl    String?
 
   passwordResetTokens PasswordResetToken[]
+
+  workspaces Workspace[]
 }
 
 model PasswordResetToken {
@@ -21,4 +23,30 @@ model PasswordResetToken {
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
+}
+
+model Workspace {
+  id       Int               @id @default(autoincrement())
+  name     String
+  ownerId  Int               
+  urlSlug  String            @unique
+
+  owner    User              @relation(fields: [ownerId], references: [id])
+  members  WorkspaceMember[]
+}
+
+enum WorkspaceMemberRole {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+model WorkspaceMember {
+  id          Int      @id @default(autoincrement())
+  workspaceId Int
+  userId      Int
+  role        WorkspaceMemberRole @default(MEMBER)
+    workspace Workspace @relation(fields: [workspaceId], references: [id])
+  joinedAt    DateTime @default(now())
+  @@unique([workspaceId, userId]) 
 }
