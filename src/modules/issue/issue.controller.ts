@@ -15,52 +15,53 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { IssueService } from './issue.service';
 import { CreateIssueDto, UpdateIssueDto } from './issue-dto';
+import { RequireWorkspaceRole } from '../../common/decorators/workspace-role.decorator';
+import { WorkspaceMemberRole } from '@prisma/client';
 
 @ApiTags('Issues')
-@ApiBearerAuth() // Swagger shows JWT auth
-@UseGuards(AuthGuard('jwt')) // Apply JWT guard to all routes
+@ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'))
 @Controller('api')
 export class IssueController {
   constructor(private readonly issueService: IssueService) {}
 
-  // ✅ GET /api/projects/:projectId/issues?assignee=me&sprint=active
+  // GET /api/projects/:projectId/issues?assignee=me&sprint=active
   @Get('projects/:projectId/issues')
-  findAll(
-    @Req() req: any,
-    @Param('projectId') projectId: string,
-    @Query() filters: any,
-  ) {
+  @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN, WorkspaceMemberRole.MEMBER, WorkspaceMemberRole.GUEST)
+  findAll(@Req() req: any, @Param('projectId') projectId: string, @Query() filters: any) {
     const userId = req.user?.id;
     if (!userId) throw new UnauthorizedException('User not logged in');
 
     return this.issueService.findByProject(projectId, userId, filters);
   }
 
-  // ✅ POST /api/issues?projectId=<uuid>
+  // POST /api/issues?projectId=<uuid>
   @Post('issues')
-  create(
-    @Req() req: any,
-    @Query('projectId') projectId: string,
-    @Body() dto: CreateIssueDto,
-  ) {
+  @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN, WorkspaceMemberRole.MEMBER)
+  create(@Req() req: any, @Query('projectId') projectId: string, @Body() dto: CreateIssueDto) {
     const userId = req.user?.id;
     if (!userId) throw new UnauthorizedException('User not logged in');
 
     return this.issueService.create(userId, projectId, dto);
   }
 
-  // ✅ PATCH /api/issues/:issueId
+  // PATCH /api/issues/:issueId
   @Patch('issues/:issueId')
-  update(
-    @Param('issueId') issueId: string,
-    @Body() dto: UpdateIssueDto,
-  ) {
-    return this.issueService.update(Number(issueId), dto);
+  @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN, WorkspaceMemberRole.MEMBER)
+  update(@Req() req: any, @Param('issueId') issueId: string, @Body() dto: UpdateIssueDto) {
+    const userId = req.user?.id;
+    if (!userId) throw new UnauthorizedException('User not logged in');
+
+    return this.issueService.update(userId, Number(issueId), dto);
   }
 
-  // ✅ DELETE /api/issues/:issueId
+  // DELETE /api/issues/:issueId
   @Delete('issues/:issueId')
-  remove(@Param('issueId') issueId: string) {
-    return this.issueService.remove(Number(issueId));
+  @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN, WorkspaceMemberRole.MEMBER)
+  remove(@Req() req: any, @Param('issueId') issueId: string) {
+    const userId = req.user?.id;
+    if (!userId) throw new UnauthorizedException('User not logged in');
+
+    return this.issueService.remove(userId, Number(issueId));
   }
 }

@@ -26,10 +26,10 @@ export class CreateIssueDto {
   @IsEnum(IssuePriority)
   priority: IssuePriority;
 
-  @ApiPropertyOptional({ description: 'Sprint ID (omit or null = backlog)', example: null })
+  @ApiPropertyOptional({ description: 'Sprint ID (null = backlog)', example: null })
   @IsOptional()
   @IsInt()
-  sprintId?: number | null; // allow null explicitly
+  sprintId?: number | null;
 
   @ApiPropertyOptional({ description: 'Assignee user ID', example: 1 })
   @IsOptional()

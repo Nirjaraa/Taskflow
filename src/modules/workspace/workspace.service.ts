@@ -7,22 +7,19 @@ import {  WorkspaceMemberRole } from '@prisma/client';
 export class WorkspaceService {
   constructor(private prisma: PrismaService) {}
 
-  async createWorkspace(userId: number, dto: CreateWorkspaceDto) {
-    return this.prisma.workspace.create({
-      data: {
-        name: dto.name,
-        urlSlug: dto.urlSlug,
-        ownerId: userId,
-        members: {
-          create: {
-            userId,
-            role: WorkspaceMemberRole.ADMIN,
-          },
-        },
+  async createWorkspace(ownerId: number, dto: CreateWorkspaceDto) {
+  const workspace = await this.prisma.workspace.create({
+    data: {
+      name: dto.name,
+      urlSlug: dto.urlSlug,
+      ownerId,
+      members: {
+        create: [{ userId: ownerId,  role: WorkspaceMemberRole.ADMIN}], 
       },
-      include: { members: true },
-    });
-  }
+    },
+  });
+  return workspace;
+}
 
   async listWorkspaces(userId: number) {
     return this.prisma.workspace.findMany({

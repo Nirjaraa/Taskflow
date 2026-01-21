@@ -26,27 +26,30 @@ import { WorkspaceMemberRole } from '@prisma/client';
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 
-   @Post()
+  // ✅ Create workspace → user becomes ADMIN automatically
+  @Post()
   create(@Req() req: any, @Body() dto: CreateWorkspaceDto) {
     return this.workspaceService.createWorkspace(req.user.id, dto);
   }
 
-   @Get()
+  // ✅ List workspaces of the user
+  @Get()
   list(@Req() req: any) {
     return this.workspaceService.listWorkspaces(req.user.id);
   }
 
-   @Get(':workspaceId/members')
+  // ✅ List members (any role can view)
+  @Get(':workspaceId/members')
   @RequireWorkspaceRole(
     WorkspaceMemberRole.ADMIN,
     WorkspaceMemberRole.MEMBER,
-    WorkspaceMemberRole.GUEST, 
+    WorkspaceMemberRole.GUEST,
   )
   listMembers(@Param('workspaceId') workspaceId: string) {
     return this.workspaceService.listMembers(+workspaceId);
   }
 
-   
+  // ✅ Invite member (only ADMIN)
   @Post(':workspaceId/members/invite')
   @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN)
   inviteMember(
@@ -61,7 +64,7 @@ export class WorkspaceController {
     );
   }
 
-   
+  // ✅ Update member role (only ADMIN)
   @Patch(':workspaceId/members/:userId/role')
   @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN)
   updateMemberRole(
@@ -77,6 +80,4 @@ export class WorkspaceController {
       dto,
     );
   }
-
-  
 }
