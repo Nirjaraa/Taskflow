@@ -33,6 +33,8 @@ model Workspace {
 
   owner    User              @relation(fields: [ownerId], references: [id])
   members  WorkspaceMember[]
+
+  projects Project[]
 }
 
 enum WorkspaceMemberRole {
@@ -46,7 +48,21 @@ model WorkspaceMember {
   workspaceId Int
   userId      Int
   role        WorkspaceMemberRole @default(MEMBER)
-    workspace Workspace @relation(fields: [workspaceId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
   joinedAt    DateTime @default(now())
   @@unique([workspaceId, userId]) 
+}
+
+
+model Project {
+  id          String   @id @default(uuid())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  name        String
+  key         String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+   @@unique([workspaceId, key])
 }

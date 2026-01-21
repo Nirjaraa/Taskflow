@@ -9,6 +9,13 @@ config();
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private _passwordResetToken: any;
+    private _project: any;
+  public get project(): any {
+    return this._project;
+  }
+  public set project(value: any) {
+    this._project = value;
+  }
   public get passwordResetToken(): any {
     return this._passwordResetToken;
   }
