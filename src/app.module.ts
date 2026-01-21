@@ -7,6 +7,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
 import { ProjectModule } from './modules/project/project.module';
 import { SprintModule } from './modules/sprint/sprint.module';
 import { IssueModule } from './modules/issue/issue.module';
+import { CommentModule } from './modules/comment/comment.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { IssueModule } from './modules/issue/issue.module';
     ProjectModule,
     SprintModule,
     IssueModule,
+    CommentModule,
   ],
   providers: [PrismaService],
 })

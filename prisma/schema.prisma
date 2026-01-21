@@ -18,6 +18,8 @@ model User {
 
   AssignedIssues Issue[] @relation("AssignedIssues")
   ReportedIssues Issue[] @relation("ReportedIssues")
+
+  comments Comment[]
 }
 
 model PasswordResetToken {
@@ -137,5 +139,16 @@ model Issue {
   updatedAt    DateTime       @updatedAt
 
   @@unique([projectId, ticketNumber])
+  comments Comment[]
 }
 
+model Comment {
+  id        Int      @id @default(autoincrement())
+  issueId   Int
+  userId    Int
+  content   String
+  createdAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}
