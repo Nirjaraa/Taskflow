@@ -1,12 +1,12 @@
-  datasource db {
-    provider = "postgresql"
-  }
+datasource db {
+  provider = "postgresql"
+}
 
-  generator client {
-    provider = "prisma-client-js"
-  }
+generator client {
+  provider = "prisma-client-js"
+}
 
-  model User {
+model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
   name         String
@@ -14,8 +14,10 @@
   avatarUrl    String?
 
   passwordResetTokens PasswordResetToken[]
-
   workspaces Workspace[]
+
+  AssignedIssues Issue[] @relation("AssignedIssues")
+  ReportedIssues Issue[] @relation("ReportedIssues")
 }
 
 model PasswordResetToken {
@@ -28,13 +30,13 @@ model PasswordResetToken {
 model Workspace {
   id       Int               @id @default(autoincrement())
   name     String
-  ownerId  Int               
+  ownerId  Int
   urlSlug  String            @unique
 
   owner    User              @relation(fields: [ownerId], references: [id])
   members  WorkspaceMember[]
-
   projects Project[]
+  issues   Issue[]            
 }
 
 enum WorkspaceMemberRole {
@@ -48,11 +50,10 @@ model WorkspaceMember {
   workspaceId Int
   userId      Int
   role        WorkspaceMemberRole @default(MEMBER)
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
   joinedAt    DateTime @default(now())
   @@unique([workspaceId, userId]) 
 }
-
 
 model Project {
   id          String   @id @default(uuid())
@@ -64,10 +65,11 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-   @@unique([workspaceId, key])
   sprints Sprint[]
-}
+  issues  Issue[]
 
+  @@unique([workspaceId, key])
+}
 
 model Sprint {
   id        Int      @id @default(autoincrement())
@@ -77,6 +79,8 @@ model Sprint {
   status    SprintStatus @default(PENDING)
   startDate DateTime?
   endDate   DateTime?
+
+  issues    Issue[]
 }
 
 enum SprintStatus {
@@ -84,3 +88,54 @@ enum SprintStatus {
   ACTIVE
   COMPLETED
 }
+
+enum IssueStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum IssueType {
+  TASK
+  BUG
+  STORY
+}
+
+model Issue {
+  id           Int            @id @default(autoincrement())
+
+  projectId    String
+  workspaceId  Int
+  sprintId     Int?
+
+  ticketNumber Int
+  title        String
+  description  String?
+
+  status       IssueStatus    @default(TODO)
+  priority     IssuePriority  @default(MEDIUM)
+  type         IssueType      @default(TASK)
+
+  assigneeId   Int?
+  reporterId   Int
+
+  listPosition Float          @default(0)
+
+  project      Project        @relation(fields: [projectId], references: [id])
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id])
+  sprint       Sprint?        @relation(fields: [sprintId], references: [id])
+  assignee     User?          @relation("AssignedIssues", fields: [assigneeId], references: [id])
+  reporter     User           @relation("ReportedIssues", fields: [reporterId], references: [id])
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([projectId, ticketNumber])
+}
+
