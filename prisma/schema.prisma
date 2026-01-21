@@ -65,4 +65,22 @@ model Project {
   updatedAt   DateTime @updatedAt
 
    @@unique([workspaceId, key])
+  sprints Sprint[]
+}
+
+
+model Sprint {
+  id        Int      @id @default(autoincrement())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  name      String
+  status    SprintStatus @default(PENDING)
+  startDate DateTime?
+  endDate   DateTime?
+}
+
+enum SprintStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
 }

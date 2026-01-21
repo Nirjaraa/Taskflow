@@ -5,6 +5,7 @@ import { UsersModule } from './modules/users/users.module';
 import { PrismaService } from './prisma/prisma.service';
 import { WorkspaceModule } from './modules/workspace/workspace.module';
 import { ProjectModule } from './modules/project/project.module';
+import { SprintModule } from './modules/sprint/sprint.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ProjectModule } from './modules/project/project.module';
     UsersModule,
     WorkspaceModule,
     ProjectModule,
+    SprintModule,
   ],
   providers: [PrismaService],
 })
