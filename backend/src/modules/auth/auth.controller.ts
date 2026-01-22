@@ -9,14 +9,15 @@ import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto, UpdateProfi
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(
-      dto.email,
-      dto.password,
-      dto.name,
-    );
-  }
+@Post('register')
+register(@Body() dto: RegisterDto) {
+  return this.authService.register(
+    dto.email,   
+    dto.name,    
+    dto.password, 
+  );
+}
+
 
   @Post('login')
   login(@Body() dto: LoginDto) {
