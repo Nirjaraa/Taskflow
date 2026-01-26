@@ -47,3 +47,35 @@ export const removeToken = () => {
   localStorage.removeItem('token');
   delete api.defaults.headers.common['Authorization'];
 };
+
+ 
+export const createWorkspace = (data: { name: string; urlSlug: string }) =>
+  api.post('/workspaces', data);
+
+export const listWorkspaces = () =>
+  api.get('/workspaces');
+
+export const listMembers = (workspaceId: number) =>
+  api.get(`/workspaces/${workspaceId}/members`);
+
+export const inviteMember = (
+  workspaceId: number,
+  data: { email: string; role: 'ADMIN' | 'MEMBER'|'GUEST' }
+) =>
+  api.post(`/workspaces/${workspaceId}/members/invite`, data);
+
+  export const updateMemberRole = (
+  workspaceId: number,
+  userId: number,
+  newRole: 'ADMIN' | 'MEMBER' | 'GUEST'
+) => {
+  return api.patch(
+    `/workspaces/${workspaceId}/members/${userId}/role`,
+    { role: newRole }
+  );
+};
+
+
+  // List projects in a workspace
+export const listProjects = (workspaceId: number) =>
+  api.get(`/project/workspace/${workspaceId}`);

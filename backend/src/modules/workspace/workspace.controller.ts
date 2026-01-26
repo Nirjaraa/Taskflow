@@ -35,7 +35,11 @@ export class WorkspaceController {
   // ✅ List workspaces of the user
   @Get()
   list(@Req() req: any) {
+    
+    
     return this.workspaceService.listWorkspaces(req.user.id);
+    
+    
   }
 
   // ✅ List members (any role can view)
@@ -50,19 +54,19 @@ export class WorkspaceController {
   }
 
   // ✅ Invite member (only ADMIN)
-  @Post(':workspaceId/members/invite')
-  @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN)
-  inviteMember(
-    @Req() req: any,
-    @Param('workspaceId') workspaceId: string,
-    @Body() dto: InviteMemberDto,
-  ) {
-    return this.workspaceService.inviteMember(
-      +workspaceId,
-      req.user.id,
-      dto,
-    );
-  }
+@Post(':workspaceId/members/invite')
+@RequireWorkspaceRole(WorkspaceMemberRole.ADMIN)
+inviteMember(
+  @Req() req: any,
+  @Param('workspaceId') workspaceId: string,
+  @Body() dto: InviteMemberDto,
+) {
+  return this.workspaceService.inviteMember(
+    +workspaceId,
+    req.user.id,
+    dto,
+  );
+}
 
   // ✅ Update member role (only ADMIN)
   @Patch(':workspaceId/members/:userId/role')
@@ -72,12 +76,17 @@ export class WorkspaceController {
     @Param('workspaceId') workspaceId: string,
     @Param('userId') userId: string,
     @Body() dto: UpdateMemberRoleDto,
+    
   ) {
+        console.log('Updater ID:', req.user.id);
+
     return this.workspaceService.updateMemberRole(
       +workspaceId,
       +userId,
       req.user.id,
+      
       dto,
     );
+
   }
 }

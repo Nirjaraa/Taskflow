@@ -20,6 +20,8 @@ model User {
   ReportedIssues Issue[] @relation("ReportedIssues")
 
   comments Comment[]
+
+  workspaceMembers WorkspaceMember[]
 }
 
 model PasswordResetToken {
@@ -47,12 +49,19 @@ enum WorkspaceMemberRole {
   GUEST
 }
 
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+}
+
 model WorkspaceMember {
   id          Int      @id @default(autoincrement())
   workspaceId Int
   userId      Int
   role        WorkspaceMemberRole @default(MEMBER)
+  status      InviteStatus        @default(PENDING)
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])  
   joinedAt    DateTime @default(now())
   @@unique([workspaceId, userId]) 
 }

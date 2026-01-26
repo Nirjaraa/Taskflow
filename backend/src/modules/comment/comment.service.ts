@@ -19,26 +19,34 @@ export class CommentService {
     return this.prisma.comment.findMany({
       where: { issueId },
       orderBy: { createdAt: 'asc' },
+      include: { user: true }, 
     });
   }
 
   async create(userId: number, dto: CreateCommentDto) {
-    const issue = await this.prisma.issue.findUnique({ where: { id: dto.issueId } });
-    if (!issue) throw new NotFoundException('Issue not found');
+  // convert dto.issueId to number
+  const issueId = Number(dto.issueId);
+  if (isNaN(issueId)) throw new Error('Invalid issueId');
 
-    const member = await this.prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId: issue.workspaceId, userId } },
-    });
-    if (!member) throw new UnauthorizedException('You cannot comment on this issue');
+  const issue = await this.prisma.issue.findUnique({
+    where: { id: issueId },
+  });
+  if (!issue) throw new NotFoundException('Issue not found');
 
-    return this.prisma.comment.create({
-      data: {
-        content: dto.content,
-        issueId: dto.issueId,
-        userId,
-      },
-    });
-  }
+  const member = await this.prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId: issue.workspaceId, userId } },
+  });
+  if (!member) throw new UnauthorizedException('You cannot comment on this issue');
+
+  return this.prisma.comment.create({
+    data: {
+      content: dto.content,
+      issueId: issueId,
+      userId,
+    },
+  });
+}
+
 
   async update(userId: number, commentId: number, dto: UpdateCommentDto) {
     const comment = await this.prisma.comment.findUnique({ where: { id: commentId } });
