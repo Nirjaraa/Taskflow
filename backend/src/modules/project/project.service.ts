@@ -51,17 +51,30 @@ export class ProjectService {
   }
 
   // ✅ Get Single Project
-  async findOne(userId: string, projectId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-    });
+async findOne(userId: string, projectId: string) {
+  const project = await this.prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      workspace: {
+        include: {
+          members: {
+            where: { userId: Number(userId) },
+          },
+        },
+      },
+    },
+  });
 
-    if (!project) throw new NotFoundException('Project not found');
+  if (!project) throw new NotFoundException('Project not found');
 
-    await this.verifyWorkspaceAccess(userId, project.workspaceId);
-
-    return project;
+  if (project.workspace.members.length === 0) {
+    throw new ForbiddenException('Access denied');
   }
+
+   const role = project.workspace.members[0].role;
+
+  return { ...project, role };
+}
 
   // ✅ Update Project
   async update(userId: string, projectId: string, dto: any) {

@@ -95,13 +95,27 @@ export const listSprints = async (projectId: string) => {
   return res.data;
 };
 
-export const createSprint = async (projectId: string, dto: { name: string }) => {
-  const res = await api.post(`/api/projects/${projectId}/sprints`, dto);
+// ---- Create Sprint ----
+export const createSprint = async (
+  projectId: string,
+  name: string,
+  status: 'PENDING' | 'ACTIVE' | 'COMPLETED' = 'PENDING'
+) => {
+  const res = await api.post(`/api/projects/${projectId}/sprints`, { name, status });
   return res.data;
 };
 
-export const updateSprint = async (sprintId: string, dto: { name?: string; status?: string }) => {
-  const res = await api.patch(`/api/sprints/${sprintId}`, dto);
+// ---- Update Sprint ----
+export const updateSprint = async (
+  sprintId: string,
+  name?: string,
+  status?: 'PENDING' | 'ACTIVE' | 'COMPLETED'
+) => {
+  const payload: { name?: string; status?: 'PENDING' | 'ACTIVE' | 'COMPLETED' } = {};
+  if (name) payload.name = name;
+  if (status) payload.status = status;
+
+  const res = await api.patch(`/api/sprints/${sprintId}`, payload);
   return res.data;
 };
 

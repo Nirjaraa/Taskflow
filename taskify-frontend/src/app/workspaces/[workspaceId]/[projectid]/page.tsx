@@ -14,7 +14,6 @@ import {
 } from '../../../lib/auth';
 import { ChevronDown, ChevronUp, Trash2, Edit, Plus, X } from 'lucide-react';
 
-// Optional simple toast component
 const Toast = ({ message, onClose }: { message: string; onClose: () => void }) => (
   <div className="fixed bottom-4 right-4 bg-red-100 text-red-700 px-4 py-2 rounded shadow flex items-center gap-2">
     <span>{message}</span>
@@ -22,7 +21,6 @@ const Toast = ({ message, onClose }: { message: string; onClose: () => void }) =
   </div>
 );
 
-// Helper to normalize useParams to string
 const toStringParam = (p: string | string[] | undefined) =>
   Array.isArray(p) ? p[0] : p || '';
 
@@ -33,7 +31,6 @@ export default function ProjectDetailPage() {
   const wsId = toStringParam(workspaceId);
   const projId = toStringParam(projectid);
 
-  // Guard against missing params
   if (!wsId || !projId) return <div className="p-8 text-red-600">Invalid URL</div>;
 
   const [project, setProject] = useState<any>(null);
@@ -45,19 +42,19 @@ export default function ProjectDetailPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalValue, setModalValue] = useState('');
+  const [modalStatus, setModalStatus] = useState<'PENDING' | 'ACTIVE' | 'COMPLETED'>('PENDING');
   const [editingSprintId, setEditingSprintId] = useState<string | null>(null);
 
-  // ---------- Fetch project & sprints ----------
+   // ---------- Fetch project & sprints ----------
   useEffect(() => {
     const fetchData = async () => {
       loadToken();
-
       try {
         const projectRes = await getProject(wsId, projId);
         setProject(projectRes);
-        setIsAdmin(projectRes.role === 'ADMIN'); // adjust according to your API
-      } catch (err: any) {
-        console.error('Project load failed:', err);
+        setIsAdmin(projectRes.role === 'ADMIN'); // now works
+      } catch (err) {
+        console.error(err);
         router.replace(`/workspaces/${wsId}`);
         return;
       }
@@ -65,14 +62,12 @@ export default function ProjectDetailPage() {
       try {
         const sprintsRes = await listSprints(projId);
         setSprints(sprintsRes);
-      } catch (err: any) {
-        console.error('Sprints load failed:', err);
+      } catch (err) {
+        console.error(err);
         setToast('Failed to load sprints');
       }
-
       setLoading(false);
     };
-
     fetchData();
   }, [wsId, projId, router]);
 
@@ -100,28 +95,34 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleOpenModal = (sprintId?: string, name?: string) => {
+  const handleOpenModal = (sprintId?: string, name?: string, status?: string) => {
     setEditingSprintId(sprintId || null);
     setModalValue(name || '');
+    setModalStatus((status as 'PENDING' | 'ACTIVE' | 'COMPLETED') || 'PENDING');
     setModalOpen(true);
   };
 
   const handleModalSubmit = async () => {
     if (!modalValue.trim()) return;
+
     try {
       if (editingSprintId) {
-        // Update sprint
-        await updateSprint(editingSprintId, { name: modalValue });
-        setSprints(
-          sprints.map((s) => (s.id === editingSprintId ? { ...s, name: modalValue } : s))
-        );
-      } else {
-        // Create sprint
-        const newSprint = await createSprint(projId, { name: modalValue });
-        setSprints([...sprints, newSprint]);
-      }
+  // Update sprint
+  await updateSprint(editingSprintId, modalValue, modalStatus);
+  setSprints(
+    sprints.map((s) =>
+      s.id === editingSprintId ? { ...s, name: modalValue, status: modalStatus } : s
+    )
+  );
+} else {
+  // Create sprint
+  const newSprint = await createSprint(projId, modalValue, modalStatus);
+  setSprints([...sprints, newSprint]);
+}
+
       setModalOpen(false);
       setModalValue('');
+      setModalStatus('PENDING');
       setEditingSprintId(null);
     } catch (err: any) {
       console.error(err);
@@ -196,7 +197,7 @@ export default function ProjectDetailPage() {
                     {isAdmin && (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleOpenModal(s.id, s.name)}
+                          onClick={() => handleOpenModal(s.id, s.name, s.status)}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           <Edit size={16} />
@@ -226,36 +227,67 @@ export default function ProjectDetailPage() {
       </main>
 
       {/* Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow w-80">
-            <h3 className="text-lg font-semibold mb-2">
-              {editingSprintId ? 'Edit Sprint' : 'Create Sprint'}
-            </h3>
-            <input
-              type="text"
-              className="w-full border px-2 py-1 rounded mb-4"
-              value={modalValue}
-              onChange={(e) => setModalValue(e.target.value)}
-              placeholder="Sprint name"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleModalSubmit}
-                className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal */}
+{modalOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-2xl shadow-xl w-96 animate-slide-in">
+      <h3 className="text-xl font-bold mb-4 text-purple-700">
+        {editingSprintId ? 'Edit Sprint' : 'Create Sprint'}
+      </h3>
+
+      {/* Sprint Name */}
+      <label className="block text-gray-700 mb-1 font-medium">Sprint Name</label>
+      <input
+        type="text"
+        className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 mb-4"
+        value={modalValue}
+        onChange={(e) => setModalValue(e.target.value)}
+        placeholder="Enter sprint name"
+      />
+
+      {/* Sprint Status */}
+      <label className="block text-gray-700 mb-1 font-medium">Status</label>
+      <div className="flex gap-2 mb-6">
+        {['PENDING', 'ACTIVE', 'COMPLETED'].map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setModalStatus(s as 'PENDING' | 'ACTIVE' | 'COMPLETED')}
+            className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors
+              ${
+                modalStatus === s
+                  ? s === 'ACTIVE'
+                    ? 'bg-green-100 text-green-800'
+                    : s === 'COMPLETED'
+                    ? 'bg-gray-200 text-gray-700'
+                    : 'bg-yellow-100 text-yellow-800'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+          >
+            {s.charAt(0) + s.slice(1).toLowerCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* Modal Actions */}
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => setModalOpen(false)}
+          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleModalSubmit}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
+        >
+          {editingSprintId ? 'Update' : 'Create'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* Toast */}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}

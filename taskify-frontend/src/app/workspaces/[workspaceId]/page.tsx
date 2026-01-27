@@ -9,7 +9,7 @@ import {
   inviteMember,
   updateMemberRole,
   listProjects,
-  createProject,  // ✅ updated
+  createProject,   
   loadToken,
   getMe 
 } from '../../lib/auth';
@@ -311,41 +311,65 @@ export default function WorkspaceDetailPage() {
         />
 
         {/* Create Project Modal */}
-        {projectModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded shadow w-96">
-              <h3 className="text-lg font-semibold mb-4">Create Project</h3>
-              <input
-                type="text"
-                placeholder="Project Name"
-                className="w-full border px-2 py-1 rounded mb-3"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-              />
-              <textarea
-                placeholder="Project Description (optional)"
-                className="w-full border px-2 py-1 rounded mb-4"
-                value={newProjectDescription}
-                onChange={(e) => setNewProjectDescription(e.target.value)}
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                  onClick={() => setProjectModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
-                  onClick={handleCreateProject}
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Create Project Modal */}
+{projectModalOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fadeIn">
+      {/* Modal Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold text-purple-700">Create Project</h3>
+        <button
+          onClick={() => setProjectModalOpen(false)}
+          className="text-gray-400 hover:text-gray-600 transition"
+        >
+          ✕
+        </button>
+      </div>
 
+      {/* Project Name */}
+      <div className="mb-4">
+        <label className="block text-gray-600 font-medium mb-1">Project Name</label>
+        <input
+          type="text"
+          placeholder="Enter project name"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 transition"
+          value={newProjectName}
+          onChange={(e) => setNewProjectName(e.target.value)}
+        />
+      </div>
+
+      {/* Project Description */}
+      <div className="mb-4">
+        <label className="block text-gray-600 font-medium mb-1">Description (optional)</label>
+        <textarea
+          placeholder="Describe your project"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none transition"
+          rows={4}
+          value={newProjectDescription}
+          onChange={(e) => setNewProjectDescription(e.target.value)}
+        />
+      </div>
+
+      {/* Modal Actions */}
+      <div className="flex justify-end gap-3 mt-2">
+        <button
+          onClick={() => setProjectModalOpen(false)}
+          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleCreateProject}
+          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow hover:shadow-lg transition"
+        >
+          Create Project
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      
       </main>
     </div>
   );
