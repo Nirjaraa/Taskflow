@@ -70,4 +70,10 @@ export class ProjectController {
   remove(@Req() req: any, @Param('projectId') projectId: string) {
     return this.projectService.remove(req.user.id, projectId);
   }
+
+   @Get('projects/new')
+  async listNewProjects(@Req() req: any) {
+    const userId = req.user.id;
+    return this.projectService.listNewProjects(userId);
+  }
 }

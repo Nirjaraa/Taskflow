@@ -64,4 +64,10 @@ export class IssueController {
 
     return this.issueService.remove(userId, Number(issueId));
   }
+
+   @Get('issues/new')
+  async listNewIssues(@Req() req: any) {
+    const userId = req.user.id;
+    return this.issueService.listNewIssues(userId);
+  }
 }

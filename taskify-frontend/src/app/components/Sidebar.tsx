@@ -10,7 +10,7 @@ export default function Sidebar() {
 
   const logout = () => {
     Cookies.remove('token');
-    router.push('/auth/login');
+    router.push('/');
   };
 
   return (

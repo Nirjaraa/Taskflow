@@ -94,4 +94,35 @@ async findOne(userId: string, projectId: string) {
       where: { id: project.id },
     });
   }
+
+    async listNewProjects(userId: number) {
+    // find workspaces where user is a member
+    const workspaces = await this.prisma.workspace.findMany({
+      where: {
+        members: {
+          some: { userId, status: 'ACCEPTED' },
+        },
+      },
+      include: {
+        projects: true,
+      },
+    });
+
+    // flatten all projects
+    const projects: any[] = [];
+    for (const ws of workspaces) {
+      for (const p of ws.projects) {
+        projects.push({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          workspaceId: ws.id,
+          workspaceName: ws.name,
+        });
+      }
+    }
+
+    return projects;
+  }
+
 }

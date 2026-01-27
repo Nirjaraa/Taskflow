@@ -7,7 +7,7 @@ import {
   createWorkspace,
   inviteMember,
   acceptInvite,
-} from '../lib/auth'; // make sure acceptInvite exists
+} from '../lib/auth'; 
 import { Check, Plus, X } from 'lucide-react';
 
 type Workspace = {

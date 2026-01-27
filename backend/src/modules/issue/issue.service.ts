@@ -102,4 +102,28 @@ export class IssueService {
 
     return this.prisma.issue.delete({ where: { id: issueId } });
   }
+
+   async listNewIssues(userId: number) {
+    const issues = await this.prisma.issue.findMany({
+      where: {
+        assigneeId: userId,
+        status: { not: 'DONE' }, // only active issues
+      },
+      include: {
+        project: true,
+        workspace: true,
+      },
+    });
+
+    return issues.map(i => ({
+      id: i.id,
+      title: i.title,
+      projectId: i.projectId,
+      projectName: i.project.name,
+      workspaceId: i.workspaceId,
+      workspaceName: i.workspace.name,
+      status: i.status,
+      priority: i.priority,
+    }));
+  }
 }

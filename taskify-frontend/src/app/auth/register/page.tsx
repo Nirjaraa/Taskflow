@@ -24,7 +24,7 @@ export default function RegisterPage() {
         router.push('/dashboard');
       } else {
         // fallback: go to login page
-        router.push('/auth/login');
+        router.push('/');
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Registration failed');
@@ -65,7 +65,7 @@ export default function RegisterPage() {
 
         <p className="text-center mt-4 text-sm text-purple-700">
           Already have an account?{' '}
-          <a href="/auth/login" className="underline hover:text-purple-900">
+          <a href="/" className="underline hover:text-purple-900">
             Login
           </a>
         </p>

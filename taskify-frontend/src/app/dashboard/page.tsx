@@ -3,45 +3,109 @@
 import DashboardLayout from './../components/DashboardLayout';
 import AuthGuard from './../components/AuthGuard';
 import { useEffect, useState } from 'react';
-import { getMe } from './../lib/auth';
+import { getDashboard } from './../lib/auth';
+import { useRouter } from 'next/navigation';
+
+const EMPTY_DASHBOARD = {
+  pendingInvites: [],
+  projects: [],
+  issues: [],
+  sprints: [],
+  comments: [],
+};
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+  const [dashboard, setDashboard] = useState<any>(EMPTY_DASHBOARD);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getMe()
-      .then(res => setUser(res.data))
-      .catch(() => (window.location.href = '/auth/login'));
+    const fetchData = async () => {
+      try {
+        const data = await getDashboard();
+        setDashboard({
+          ...EMPTY_DASHBOARD,
+          ...data, // backend data safely merged
+        });
+      } catch {
+        router.push('/auth/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  if (!user)
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading...
+        Loading dashboard...
       </div>
     );
+  }
 
   return (
     <AuthGuard>
       <DashboardLayout>
-        <h1 className="text-2xl font-bold mb-6">Welcome, {user.name}</h1>
+        <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
 
-        {/* Example dashboard cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="p-4 bg-white shadow rounded-lg">
-            <h3 className="font-semibold text-gray-700">Projects</h3>
-            <p className="text-2xl font-bold">12</p>
+        <div className="space-y-4">
+
+          {/* Pending Invites */}
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded shadow">
+            {dashboard.pendingInvites.length > 0 ? (
+              <p>
+                You have <strong>{dashboard.pendingInvites.length}</strong> pending workspace invite(s).
+              </p>
+            ) : (
+              <p>No pending workspace invites</p>
+            )}
           </div>
 
-          <div className="p-4 bg-white shadow rounded-lg">
-            <h3 className="font-semibold text-gray-700">Tasks</h3>
-            <p className="text-2xl font-bold">34</p>
+          {/* Projects */}
+          <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded shadow">
+            {dashboard.projects.length > 0 ? (
+              <p>
+                <strong>{dashboard.projects.length}</strong> project(s) available across your workspaces.
+              </p>
+            ) : (
+              <p>No projects have been added to your workspaces yet</p>
+            )}
           </div>
 
-          <div className="p-4 bg-white shadow rounded-lg">
-            <h3 className="font-semibold text-gray-700">Reports</h3>
-            <p className="text-2xl font-bold">7</p>
+          {/* Issues (workspace-based, not assignee-based) */}
+          <div className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded shadow">
+            {dashboard.issues.length > 0 ? (
+              <p>
+                <strong>{dashboard.issues.length}</strong> issue(s) exist in your workspaces.
+              </p>
+            ) : (
+              <p>No issues created in your workspaces yet</p>
+            )}
           </div>
+
+          {/* Sprints */}
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow">
+            {dashboard.sprints.length > 0 ? (
+              <p>
+                <strong>{dashboard.sprints.length}</strong> sprint(s) are active or planned.
+              </p>
+            ) : (
+              <p>No sprints available</p>
+            )}
+          </div>
+
+          {/* Comments */}
+          <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded shadow">
+            {dashboard.comments.length > 0 ? (
+              <p>
+                You have <strong>{dashboard.comments.length}</strong> new comment(s) in your workspaces.
+              </p>
+            ) : (
+              <p>No new comments</p>
+            )}
+          </div>
+
         </div>
       </DashboardLayout>
     </AuthGuard>

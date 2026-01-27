@@ -8,6 +8,7 @@ import { ProjectModule } from './modules/project/project.module';
 import { SprintModule } from './modules/sprint/sprint.module';
 import { IssueModule } from './modules/issue/issue.module';
 import { CommentModule } from './modules/comment/comment.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CommentModule } from './modules/comment/comment.module';
     SprintModule,
     IssueModule,
     CommentModule,
+    DashboardModule,
   ],
   providers: [PrismaService],
 })

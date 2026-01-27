@@ -76,4 +76,30 @@ export class CommentService {
 
     return this.prisma.comment.delete({ where: { id: commentId } });
   }
+  async listNewComments(userId: number) {
+     const comments = await this.prisma.comment.findMany({
+      where: {
+        issue: {
+          assigneeId: userId,
+        },
+      },
+      include: {
+        user: true,    
+        issue: true,  
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 20,  
+    });
+
+     return comments.map(c => ({
+      id: c.id,
+      issueTitle: c.issue.title,
+      content: c.content,
+      userName: c.user.name ?? c.user.email,
+      workspaceId: c.issue.workspaceId,
+      createdAt: c.createdAt,
+    }));
+  }
 }

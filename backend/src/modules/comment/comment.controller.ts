@@ -61,4 +61,10 @@ export class CommentController {
 
     return this.commentService.remove(userId, Number(commentId));
   }
+
+   @Get('new')
+  async getNewComments(@Req() req: any) {
+    const userId = req.user.sub; // from JWT payload
+    return this.commentService.listNewComments(userId);
+  }
 }
