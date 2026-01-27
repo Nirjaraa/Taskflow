@@ -131,3 +131,67 @@ export const createProject = (workspaceId: number, data: { name: string; descrip
     description: data.description || '',
   });
 
+  // ---- Issues ----
+export const listIssues = async (
+  projectId: string,
+  filters?: { assignee?: 'me'; sprint?: string }
+) => {
+  const res = await api.get(`api/projects/${projectId}/issues`, { params: filters });
+  return res.data;
+};
+
+export const createIssue = async (
+  projectId: string,
+  data: { 
+    title: string; 
+    description?: string; 
+    type: 'BUG' | 'FEATURE' | 'TASK';
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    sprintId?: string;
+    assigneeId?: number;
+  }
+) => {
+  const res = await api.post(`api/issues?projectId=${projectId}`, data);
+  return res.data;
+};
+
+export const updateIssue = async (
+  issueId: string,
+  data: { 
+    title?: string; 
+    description?: string; 
+    type?: 'BUG' | 'FEATURE' | 'TASK';
+    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    status?: 'PENDING' | 'ACTIVE' | 'COMPLETED'; 
+    sprintId?: string;
+    assigneeId?: number;
+  }
+) => {
+  const res = await api.patch(`api/issues/${issueId}`, data);
+  return res.data;
+};
+
+export const deleteIssue = async (issueId: string) => {
+  const res = await api.delete(`api/issues/${issueId}`);
+  return res.data;
+};
+// ---- Comments ----
+export const listComments = async (issueId: string) => {
+  const res = await api.get(`/comments/issue/${issueId}`);
+  return res.data;
+};
+
+export const createComment = async (issueId: string, content: string) => {
+  const res = await api.post(`/comments`, { issueId, content });
+  return res.data;
+};
+
+export const updateComment = async (commentId: string, content: string) => {
+  const res = await api.patch(`/comments/${commentId}`, { content });
+  return res.data;
+};
+
+export const deleteComment = async (commentId: string) => {
+  const res = await api.delete(`/comments/${commentId}`);
+  return res.data;
+};

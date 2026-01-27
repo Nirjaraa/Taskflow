@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
@@ -11,65 +10,125 @@ import {
   createSprint,
   updateSprint,
   deleteSprint,
+  listIssues,
+  createIssue,
+  updateIssue,
+  deleteIssue,
+  listComments,
+  createComment,
+  deleteComment,
+  updateComment
 } from '../../../lib/auth';
-import { ChevronDown, ChevronUp, Trash2, Edit, Plus, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Edit, Plus, X, MessageCircle } from 'lucide-react';
 
 const Toast = ({ message, onClose }: { message: string; onClose: () => void }) => (
-  <div className="fixed bottom-4 right-4 bg-red-100 text-red-700 px-4 py-2 rounded shadow flex items-center gap-2">
-    <span>{message}</span>
-    <button onClick={onClose}><X size={16} /></button>
+  <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
+    {message}
+    <button onClick={onClose} className="text-white hover:text-gray-200">
+      <X size={18} />
+    </button>
   </div>
 );
 
-const toStringParam = (p: string | string[] | undefined) =>
-  Array.isArray(p) ? p[0] : p || '';
+const toStringParam = (p: string | string[] | undefined) => Array.isArray(p) ? p[0] : p || '';
 
 export default function ProjectDetailPage() {
   const { workspaceId, projectid } = useParams();
   const router = useRouter();
-
   const wsId = toStringParam(workspaceId);
   const projId = toStringParam(projectid);
 
-  if (!wsId || !projId) return <div className="p-8 text-red-600">Invalid URL</div>;
+  if (!wsId || !projId) return <div>Invalid URL</div>;
 
   const [project, setProject] = useState<any>(null);
   const [sprints, setSprints] = useState<any[]>([]);
+  const [issues, setIssues] = useState<any[]>([]);
   const [showSprints, setShowSprints] = useState(true);
+  const [showIssues, setShowIssues] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Sprint modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalValue, setModalValue] = useState('');
   const [modalStatus, setModalStatus] = useState<'PENDING' | 'ACTIVE' | 'COMPLETED'>('PENDING');
   const [editingSprintId, setEditingSprintId] = useState<string | null>(null);
 
-   // ---------- Fetch project & sprints ----------
-  useEffect(() => {
-    const fetchData = async () => {
-      loadToken();
-      try {
-        const projectRes = await getProject(wsId, projId);
-        setProject(projectRes);
-        setIsAdmin(projectRes.role === 'ADMIN'); // now works
-      } catch (err) {
-        console.error(err);
-        router.replace(`/workspaces/${wsId}`);
-        return;
-      }
+  // Issue modal state
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [issueTitle, setIssueTitle] = useState('');
+  const [issueDescription, setIssueDescription] = useState('');
+  const [issueType, setIssueType] = useState<'BUG' | 'FEATURE' | 'TASK'>('TASK');
+  const [issuePriority, setIssuePriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('MEDIUM');
+  const [issueSprintId, setIssueSprintId] = useState<string | null>(null);
+  const [issueStatus, setIssueStatus] = useState<'PENDING' | 'ACTIVE' | 'COMPLETED'>('PENDING');
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
 
-      try {
-        const sprintsRes = await listSprints(projId);
-        setSprints(sprintsRes);
-      } catch (err) {
-        console.error(err);
-        setToast('Failed to load sprints');
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+
+  // ---------- Fetch project, sprints & issues ----------
+  useEffect(() => {
+  const fetchData = async () => {
+    loadToken();
+    
+    // Check if token exists
+    const token = localStorage.getItem('token');
+    console.log('Token exists:', !!token);
+    console.log('Workspace ID:', wsId);
+    console.log('Project ID:', projId);
+    
+    try {
+      const projectRes = await getProject(wsId, projId);
+      setProject(projectRes);
+      setIsAdmin(projectRes.role === 'ADMIN');
+      console.log('✅ Project loaded successfully');
+    } catch (err: any) {
+      console.error('❌ Project fetch failed:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        url: err.config?.url
+      });
+      router.replace(`/workspaces/${wsId}`);
+      return;
+    }
+
+    try {
+      const sprintsRes = await listSprints(projId);
+      setSprints(sprintsRes);
+      console.log('✅ Sprints loaded:', sprintsRes.length);
+    } catch (err: any) {
+      console.error('❌ Sprints fetch failed:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        url: err.config?.url
+      });
+      setToast('Failed to load sprints');
+    }
+
+    try {
+      console.log('Attempting to fetch issues...');
+      const issuesRes = await listIssues(projId);
+      setIssues(issuesRes);
+      console.log('✅ Issues loaded:', issuesRes.length);
+    } catch (err: any) {
+      console.error('❌ Issues fetch failed:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        url: err.config?.url,
+        fullError: err
+      });
+      // Don't show toast if it's just empty - only show for real errors
+      if (err.response?.status !== 404) {
+        setToast('Failed to load issues');
       }
-      setLoading(false);
-    };
-    fetchData();
-  }, [wsId, projId, router]);
+    }
+
+    setLoading(false);
+  };
+  fetchData();
+}, [wsId, projId, router]);
 
   // ---------- Project actions ----------
   const handleDeleteProject = async () => {
@@ -95,31 +154,27 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleOpenModal = (sprintId?: string, name?: string, status?: string) => {
+  const handleOpenSprintModal = (sprintId?: string, name?: string, status?: string) => {
     setEditingSprintId(sprintId || null);
     setModalValue(name || '');
     setModalStatus((status as 'PENDING' | 'ACTIVE' | 'COMPLETED') || 'PENDING');
     setModalOpen(true);
   };
 
-  const handleModalSubmit = async () => {
+  const handleSprintModalSubmit = async () => {
     if (!modalValue.trim()) return;
-
     try {
       if (editingSprintId) {
-  // Update sprint
-  await updateSprint(editingSprintId, modalValue, modalStatus);
-  setSprints(
-    sprints.map((s) =>
-      s.id === editingSprintId ? { ...s, name: modalValue, status: modalStatus } : s
-    )
-  );
-} else {
-  // Create sprint
-  const newSprint = await createSprint(projId, modalValue, modalStatus);
-  setSprints([...sprints, newSprint]);
-}
-
+        await updateSprint(editingSprintId, modalValue, modalStatus);
+        setSprints(
+          sprints.map((s) =>
+            s.id === editingSprintId ? { ...s, name: modalValue, status: modalStatus } : s
+          )
+        );
+      } else {
+        const newSprint = await createSprint(projId, modalValue, modalStatus);
+        setSprints([...sprints, newSprint]);
+      }
       setModalOpen(false);
       setModalValue('');
       setModalStatus('PENDING');
@@ -130,21 +185,137 @@ export default function ProjectDetailPage() {
     }
   };
 
-  if (loading) return <div className="p-8">Loading project...</div>;
-  if (!project) return <div className="p-8">Project not found</div>;
+  // ---------- Issue actions ----------
+  const handleDeleteIssue = async (id: string) => {
+    if (!confirm('Delete this issue?')) return;
+    try {
+      await deleteIssue(id);
+      setIssues(issues.filter((i) => i.id !== id));
+    } catch (err: any) {
+      console.error(err);
+      setToast(err.response?.data?.message || 'Failed to delete issue');
+    }
+  };
+
+  const handleOpenIssueModal = (issue?: any) => {
+    if (issue) {
+      setEditingIssueId(issue.id);
+      setIssueTitle(issue.title || '');
+      setIssueDescription(issue.description || '');
+      setIssueType(issue.type || 'TASK');
+      setIssuePriority(issue.priority || 'MEDIUM');
+      setIssueSprintId(issue.sprintId || null);
+      setIssueStatus(issue.status || 'PENDING');
+      fetchComments(issue.id);
+    } else {
+      setEditingIssueId(null);
+      setIssueTitle('');
+      setIssueDescription('');
+      setIssueType('TASK');
+      setIssuePriority('MEDIUM');
+      setIssueSprintId(null);
+      setIssueStatus('PENDING');
+      setComments([]);
+    }
+    setIssueModalOpen(true);
+  };
+
+ const handleIssueModalSubmit = async () => {
+  if (!issueTitle.trim()) return;
+  try {
+    const issueData: any = {
+      title: issueTitle,
+      description: issueDescription,
+      type: issueType,
+      priority: issuePriority,
+      sprintId: issueSprintId || undefined,
+    };
+
+    if (editingIssueId) {
+      // For update, include status
+      issueData.status = issueStatus;
+      await updateIssue(editingIssueId, issueData);
+      setIssues(
+        issues.map((i) =>
+          i.id === editingIssueId ? { ...i, ...issueData } : i
+        )
+      );
+    } else {
+      // For create, don't include status (backend sets default)
+      const newIssue = await createIssue(projId, issueData);
+      setIssues([...issues, newIssue]);
+    }
+    setIssueModalOpen(false);
+    setIssueTitle('');
+    setIssueDescription('');
+    setIssueType('TASK');
+    setIssuePriority('MEDIUM');
+    setIssueSprintId(null);
+    setIssueStatus('PENDING');
+    setEditingIssueId(null);
+  } catch (err: any) {
+    console.error(err);
+    setToast(err.response?.data?.message || 'Failed to save issue');
+  }
+};
+
+  const fetchComments = async (issueId: string) => {
+    try {
+      const commentsRes = await listComments(issueId);
+      setComments(commentsRes);
+    } catch (err) {
+      console.error(err);
+      setToast('Failed to load comments');
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !editingIssueId) return;
+    try {
+      const comment = await createComment(editingIssueId, newComment);
+      setComments([...comments, comment]);
+      setNewComment('');
+    } catch (err) {
+      console.error(err);
+      setToast('Failed to add comment');
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL': return 'text-red-600 bg-red-50';
+      case 'HIGH': return 'text-orange-600 bg-orange-50';
+      case 'MEDIUM': return 'text-yellow-600 bg-yellow-50';
+      case 'LOW': return 'text-green-600 bg-green-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'BUG': return 'text-red-600 bg-red-50';
+      case 'FEATURE': return 'text-blue-600 bg-blue-50';
+      case 'TASK': return 'text-purple-600 bg-purple-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  if (loading) return <div>Loading project...</div>;
+  if (!project) return <div>Project not found</div>;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <main className="flex-1 p-8 space-y-6">
+
+      <div className="flex-1 p-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-purple-700">{project.name}</h1>
-          <div className="flex space-x-2">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-800">{project.name}</h1>
+          <div className="flex gap-2">
             {isAdmin && (
               <button
                 onClick={handleDeleteProject}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center gap-1"
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-2"
               >
                 <Trash2 size={16} /> Delete
               </button>
@@ -158,46 +329,38 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        {project.description && <p className="text-gray-600">{project.description}</p>}
+        {project.description && (
+          <p className="text-gray-600 mb-6">{project.description}</p>
+        )}
 
         {/* Sprints */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div
-            className="flex justify-between items-center cursor-pointer"
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <button
             onClick={() => setShowSprints(!showSprints)}
+            className="w-full flex items-center justify-between text-xl font-semibold text-gray-800 mb-4"
           >
-            <h2 className="text-xl font-semibold text-purple-700">Sprints</h2>
+            <span>Sprints</span>
             {showSprints ? <ChevronUp /> : <ChevronDown />}
-          </div>
+          </button>
 
           {showSprints && (
-            <div className="mt-4 space-y-3">
+            <div>
               {sprints.length === 0 ? (
-                <p className="text-gray-500 text-sm">No sprints yet.</p>
+                <p className="text-gray-500 italic">No sprints yet.</p>
               ) : (
                 sprints.map((s) => (
                   <div
                     key={s.id}
-                    className="border p-3 rounded hover:bg-gray-50 flex justify-between items-center"
+                    className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-gray-50"
                   >
                     <div>
                       <span className="font-medium">{s.name}</span>
-                      <span
-                        className={`ml-2 px-2 py-0.5 rounded text-sm font-medium ${
-                          s.status === 'ACTIVE'
-                            ? 'bg-green-100 text-green-800'
-                            : s.status === 'COMPLETED'
-                            ? 'bg-gray-200 text-gray-700'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {s.status}
-                      </span>
+                      <span className="ml-2 text-sm text-gray-500">{s.status}</span>
                     </div>
                     {isAdmin && (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleOpenModal(s.id, s.name, s.status)}
+                          onClick={() => handleOpenSprintModal(s.id, s.name, s.status)}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           <Edit size={16} />
@@ -215,7 +378,7 @@ export default function ProjectDetailPage() {
               )}
               {isAdmin && (
                 <button
-                  onClick={() => handleOpenModal()}
+                  onClick={() => handleOpenSprintModal()}
                   className="mt-2 px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-2"
                 >
                   <Plus size={16} /> Add Sprint
@@ -224,73 +387,315 @@ export default function ProjectDetailPage() {
             </div>
           )}
         </div>
-      </main>
 
-      {/* Modal */}
-      {/* Modal */}
-{modalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-2xl shadow-xl w-96 animate-slide-in">
-      <h3 className="text-xl font-bold mb-4 text-purple-700">
-        {editingSprintId ? 'Edit Sprint' : 'Create Sprint'}
-      </h3>
-
-      {/* Sprint Name */}
-      <label className="block text-gray-700 mb-1 font-medium">Sprint Name</label>
-      <input
-        type="text"
-        className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 mb-4"
-        value={modalValue}
-        onChange={(e) => setModalValue(e.target.value)}
-        placeholder="Enter sprint name"
-      />
-
-      {/* Sprint Status */}
-      <label className="block text-gray-700 mb-1 font-medium">Status</label>
-      <div className="flex gap-2 mb-6">
-        {['PENDING', 'ACTIVE', 'COMPLETED'].map((s) => (
+        {/* Issues */}
+        <div className="bg-white rounded-lg shadow-md p-6">
           <button
-            key={s}
-            type="button"
-            onClick={() => setModalStatus(s as 'PENDING' | 'ACTIVE' | 'COMPLETED')}
-            className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors
-              ${
-                modalStatus === s
-                  ? s === 'ACTIVE'
-                    ? 'bg-green-100 text-green-800'
-                    : s === 'COMPLETED'
-                    ? 'bg-gray-200 text-gray-700'
-                    : 'bg-yellow-100 text-yellow-800'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
+            onClick={() => setShowIssues(!showIssues)}
+            className="w-full flex items-center justify-between text-xl font-semibold text-gray-800 mb-4"
           >
-            {s.charAt(0) + s.slice(1).toLowerCase()}
+            <span>Issues</span>
+            {showIssues ? <ChevronUp /> : <ChevronDown />}
           </button>
-        ))}
+
+          {showIssues && (
+            <div>
+              {issues.length === 0 ? (
+                <p className="text-gray-500 italic">No issues yet.</p>
+              ) : (
+                issues.map((i) => (
+                  <div
+                    key={i.id}
+                    className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-gray-50"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">{i.title}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${getTypeColor(i.type)}`}>
+                          {i.type}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(i.priority)}`}>
+                          {i.priority}
+                        </span>
+                      </div>
+                      {i.description && (
+                        <p className="text-sm text-gray-600">{i.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <button
+                        onClick={() => handleOpenIssueModal(i)}
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <MessageCircle size={16} /> Comments
+                      </button>
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => handleOpenIssueModal(i)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteIssue(i.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              {isAdmin && (
+                <button
+                  onClick={() => handleOpenIssueModal()}
+                  className="mt-2 px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-2"
+                >
+                  <Plus size={16} /> Add Issue
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Sprint Modal */}
+        {modalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">
+                {editingSprintId ? 'Edit Sprint' : 'Create Sprint'}
+              </h2>
+              <label className="block mb-2 text-sm font-medium">Sprint Name</label>
+              <input
+                type="text"
+                value={modalValue}
+                onChange={(e) => setModalValue(e.target.value)}
+                className="w-full p-2 border rounded mb-4"
+                placeholder="Enter sprint name"
+              />
+              <label className="block mb-2 text-sm font-medium">Status</label>
+              <div className="flex gap-2 mb-4">
+                {['PENDING', 'ACTIVE', 'COMPLETED'].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setModalStatus(s as 'PENDING' | 'ACTIVE' | 'COMPLETED')}
+                    className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${
+                      modalStatus === s
+                        ? s === 'ACTIVE'
+                          ? 'bg-green-100 text-green-800'
+                          : s === 'COMPLETED'
+                          ? 'bg-gray-200 text-gray-700'
+                          : 'bg-yellow-100 text-yellow-800'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {s.charAt(0) + s.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSprintModalSubmit}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
+                >
+                  {editingSprintId ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Issue Modal */}
+        {issueModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-bold mb-4">
+                {editingIssueId ? 'Edit Issue' : 'Create Issue'}
+              </h2>
+
+              <label className="block mb-2 text-sm font-medium">Title *</label>
+              <input
+                type="text"
+                value={issueTitle}
+                onChange={(e) => setIssueTitle(e.target.value)}
+                className="w-full p-2 border rounded mb-4"
+                placeholder="Issue title"
+              />
+
+              <label className="block mb-2 text-sm font-medium">Description</label>
+              <textarea
+                value={issueDescription}
+                onChange={(e) => setIssueDescription(e.target.value)}
+                className="w-full p-2 border rounded mb-4 min-h-[80px]"
+                placeholder="Describe the issue..."
+              />
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block mb-2 text-sm font-medium">Type</label>
+                  <select
+                    value={issueType}
+                    onChange={(e) => setIssueType(e.target.value as 'BUG' | 'FEATURE' | 'TASK')}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="TASK">Task</option>
+                    <option value="BUG">Bug</option>
+                    <option value="FEATURE">Feature</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium">Priority</label>
+                  <select
+                    value={issuePriority}
+                    onChange={(e) => setIssuePriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block mb-2 text-sm font-medium">Status</label>
+                  <select
+                    value={issueStatus}
+                    onChange={(e) => setIssueStatus(e.target.value as 'PENDING' | 'ACTIVE' | 'COMPLETED')}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="PENDING">Pending</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium">Sprint</label>
+                  <select
+                    value={issueSprintId || ''}
+                    onChange={(e) => setIssueSprintId(e.target.value || null)}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="">No Sprint</option>
+                    {sprints.map((sprint) => (
+                      <option key={sprint.id} value={sprint.id}>
+                        {sprint.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {editingIssueId && (
+                <div className="mb-4">
+                  <h3 className="font-semibold mb-2">Comments</h3>
+                 <div className="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto mb-2">
+  {comments.map((c) => (
+    <div
+      key={c.id}
+      className="mb-2 pb-2 border-b last:border-b-0 flex justify-between items-start"
+    >
+      <div>
+        <span className="font-medium text-sm">{c.user?.name || 'Unknown'}: </span>
+        <span className="text-sm">{c.content}</span>
+        <span className="text-xs text-gray-400 ml-2">
+          {new Date(c.createdAt).toLocaleString()}
+        </span>
       </div>
 
-      {/* Modal Actions */}
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={() => setModalOpen(false)}
-          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleModalSubmit}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
-        >
-          {editingSprintId ? 'Update' : 'Create'}
-        </button>
-      </div>
+      {/* Only author or admin can edit/delete */}
+      {(c.userId === project.userId || project.role === 'ADMIN') && (
+        <div className="flex gap-1 ml-2">
+          <button
+            onClick={async () => {
+              const newContent = prompt('Edit comment', c.content);
+              if (newContent && newContent !== c.content) {
+                try {
+                  const updated = await updateComment(c.id, newContent);
+                  setComments(comments.map((com) => (com.id === c.id ? updated : com)));
+                } catch (err: any) {
+                  setToast(err.response?.data?.message || 'Failed to update comment');
+                }
+              }
+            }}
+            className="text-blue-600 hover:text-blue-800 text-xs"
+          >
+            Edit
+          </button>
+          <button
+            onClick={async () => {
+              if (confirm('Delete this comment?')) {
+                try {
+                  await deleteComment(c.id);
+                  setComments(comments.filter((com) => com.id !== c.id));
+                } catch (err: any) {
+                  setToast(err.response?.data?.message || 'Failed to delete comment');
+                }
+              }
+            }}
+            className="text-red-600 hover:text-red-800 text-xs"
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
-  </div>
-)}
+  ))}
+</div>
 
 
-      {/* Toast */}
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="flex-1 p-2 border rounded"
+                      placeholder="Add comment"
+                    />
+                    <button
+                      onClick={handleAddComment}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIssueModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleIssueModalSubmit}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
+                >
+                  {editingIssueId ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Toast */}
+        {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      </div>
     </div>
   );
 }
