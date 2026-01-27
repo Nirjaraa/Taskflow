@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsInt, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsNumber, IsNotEmpty, IsString } from 'class-validator';
 import { WorkspaceMemberRole } from '@prisma/client';  
 
 export class CreateWorkspaceDto {
@@ -38,3 +38,7 @@ export class UpdateMemberRoleDto {
   role: WorkspaceMemberRole;
 }
 
+export class DeleteWorkspaceDto {
+  @IsNumber()
+  workspaceId: number;
+}

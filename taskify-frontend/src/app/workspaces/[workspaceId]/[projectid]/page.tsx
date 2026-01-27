@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
@@ -48,6 +48,9 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+const [activeCommentsIssueId, setActiveCommentsIssueId] = useState<string | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
 
   // Sprint modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,70 +68,43 @@ export default function ProjectDetailPage() {
   const [issueStatus, setIssueStatus] = useState<'PENDING' | 'ACTIVE' | 'COMPLETED'>('PENDING');
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
 
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState('');
-
   // ---------- Fetch project, sprints & issues ----------
   useEffect(() => {
-  const fetchData = async () => {
-    loadToken();
-    
-    // Check if token exists
-    const token = localStorage.getItem('token');
-    console.log('Token exists:', !!token);
-    console.log('Workspace ID:', wsId);
-    console.log('Project ID:', projId);
-    
-    try {
-      const projectRes = await getProject(wsId, projId);
-      setProject(projectRes);
-      setIsAdmin(projectRes.role === 'ADMIN');
-      console.log('✅ Project loaded successfully');
-    } catch (err: any) {
-      console.error('❌ Project fetch failed:', {
-        status: err.response?.status,
-        message: err.response?.data?.message,
-        url: err.config?.url
-      });
-      router.replace(`/workspaces/${wsId}`);
-      return;
-    }
+    const fetchData = async () => {
+      loadToken();
+      const token = localStorage.getItem('token');
+      console.log('Token exists:', !!token);
 
-    try {
-      const sprintsRes = await listSprints(projId);
-      setSprints(sprintsRes);
-      console.log('✅ Sprints loaded:', sprintsRes.length);
-    } catch (err: any) {
-      console.error('❌ Sprints fetch failed:', {
-        status: err.response?.status,
-        message: err.response?.data?.message,
-        url: err.config?.url
-      });
-      setToast('Failed to load sprints');
-    }
-
-    try {
-      console.log('Attempting to fetch issues...');
-      const issuesRes = await listIssues(projId);
-      setIssues(issuesRes);
-      console.log('✅ Issues loaded:', issuesRes.length);
-    } catch (err: any) {
-      console.error('❌ Issues fetch failed:', {
-        status: err.response?.status,
-        message: err.response?.data?.message,
-        url: err.config?.url,
-        fullError: err
-      });
-      // Don't show toast if it's just empty - only show for real errors
-      if (err.response?.status !== 404) {
-        setToast('Failed to load issues');
+      try {
+        const projectRes = await getProject(wsId, projId);
+        setProject(projectRes);
+        setIsAdmin(projectRes.role === 'ADMIN');
+      } catch (err: any) {
+        console.error(err);
+        router.replace(`/workspaces/${wsId}`);
+        return;
       }
-    }
 
-    setLoading(false);
-  };
-  fetchData();
-}, [wsId, projId, router]);
+      try {
+        const sprintsRes = await listSprints(projId);
+        setSprints(sprintsRes);
+      } catch (err: any) {
+        console.error(err);
+        setToast('Failed to load sprints');
+      }
+
+      try {
+        const issuesRes = await listIssues(projId);
+        setIssues(issuesRes);
+      } catch (err: any) {
+        console.error(err);
+        if (err.response?.status !== 404) setToast('Failed to load issues');
+      }
+
+      setLoading(false);
+    };
+    fetchData();
+  }, [wsId, projId, router]);
 
   // ---------- Project actions ----------
   const handleDeleteProject = async () => {
@@ -206,7 +182,6 @@ export default function ProjectDetailPage() {
       setIssuePriority(issue.priority || 'MEDIUM');
       setIssueSprintId(issue.sprintId || null);
       setIssueStatus(issue.status || 'PENDING');
-      fetchComments(issue.id);
     } else {
       setEditingIssueId(null);
       setIssueTitle('');
@@ -215,68 +190,48 @@ export default function ProjectDetailPage() {
       setIssuePriority('MEDIUM');
       setIssueSprintId(null);
       setIssueStatus('PENDING');
-      setComments([]);
     }
     setIssueModalOpen(true);
   };
 
- const handleIssueModalSubmit = async () => {
-  if (!issueTitle.trim()) return;
-  try {
-    const issueData: any = {
-      title: issueTitle,
-      description: issueDescription,
-      type: issueType,
-      priority: issuePriority,
-      sprintId: issueSprintId || undefined,
-    };
-
-    if (editingIssueId) {
-      // For update, include status
-      issueData.status = issueStatus;
-      await updateIssue(editingIssueId, issueData);
-      setIssues(
-        issues.map((i) =>
-          i.id === editingIssueId ? { ...i, ...issueData } : i
-        )
-      );
-    } else {
-      // For create, don't include status (backend sets default)
-      const newIssue = await createIssue(projId, issueData);
-      setIssues([...issues, newIssue]);
-    }
-    setIssueModalOpen(false);
-    setIssueTitle('');
-    setIssueDescription('');
-    setIssueType('TASK');
-    setIssuePriority('MEDIUM');
-    setIssueSprintId(null);
-    setIssueStatus('PENDING');
-    setEditingIssueId(null);
-  } catch (err: any) {
-    console.error(err);
-    setToast(err.response?.data?.message || 'Failed to save issue');
-  }
-};
-
-  const fetchComments = async (issueId: string) => {
+  const handleIssueModalSubmit = async () => {
+    if (!issueTitle.trim()) return;
     try {
-      const commentsRes = await listComments(issueId);
-      setComments(commentsRes);
-    } catch (err) {
+      const issueData: any = {
+        title: issueTitle,
+        description: issueDescription,
+        type: issueType,
+        priority: issuePriority,
+        sprintId: issueSprintId || undefined,
+      };
+
+      if (editingIssueId) {
+        issueData.status = issueStatus;
+        await updateIssue(editingIssueId, issueData);
+        setIssues(
+          issues.map((i) =>
+            i.id === editingIssueId ? { ...i, ...issueData } : i
+          )
+        );
+      } else {
+        const newIssue = await createIssue(projId, issueData);
+        setIssues([...issues, newIssue]);
+      }
+      setIssueModalOpen(false);
+      setEditingIssueId(null);
+    } catch (err: any) {
       console.error(err);
-      setToast('Failed to load comments');
+      setToast(err.response?.data?.message || 'Failed to save issue');
     }
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !editingIssueId) return;
+    if (!newComment.trim() || !activeCommentsIssueId) return;
     try {
-      const comment = await createComment(editingIssueId, newComment);
+      const comment = await createComment(activeCommentsIssueId, newComment);
       setComments([...comments, comment]);
       setNewComment('');
-    } catch (err) {
-      console.error(err);
+    } catch {
       setToast('Failed to add comment');
     }
   };
@@ -306,23 +261,23 @@ export default function ProjectDetailPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-
       <div className="flex-1 p-8">
+
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-gray-800">{project.name}</h1>
           <div className="flex gap-2">
             {isAdmin && (
               <button
                 onClick={handleDeleteProject}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-2"
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
               >
                 <Trash2 size={16} /> Delete
               </button>
             )}
             <button
               onClick={() => router.push(`/workspaces/${wsId}`)}
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
             >
               Back to Workspace
             </button>
@@ -333,7 +288,7 @@ export default function ProjectDetailPage() {
           <p className="text-gray-600 mb-6">{project.description}</p>
         )}
 
-        {/* Sprints */}
+        {/* Sprints Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <button
             onClick={() => setShowSprints(!showSprints)}
@@ -344,30 +299,42 @@ export default function ProjectDetailPage() {
           </button>
 
           {showSprints && (
-            <div>
+            <div className="space-y-2">
               {sprints.length === 0 ? (
                 <p className="text-gray-500 italic">No sprints yet.</p>
               ) : (
                 sprints.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-gray-50"
+                    className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 shadow-sm"
                   >
-                    <div>
+                    <div className="flex items-center gap-2">
                       <span className="font-medium">{s.name}</span>
-                      <span className="ml-2 text-sm text-gray-500">{s.status}</span>
+                      <span
+                        className={`ml-2 px-2 py-1 text-sm rounded font-medium ${
+                          s.status === 'ACTIVE'
+                            ? 'bg-green-100 text-green-800'
+                            : s.status === 'PENDING'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        {s.status}
+                      </span>
                     </div>
                     {isAdmin && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleOpenSprintModal(s.id, s.name, s.status)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="p-1 hover:bg-gray-200 rounded text-blue-600"
+                          title="Edit Sprint"
                         >
                           <Edit size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteSprint(s.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="p-1 hover:bg-gray-200 rounded text-red-600"
+                          title="Delete Sprint"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -379,7 +346,7 @@ export default function ProjectDetailPage() {
               {isAdmin && (
                 <button
                   onClick={() => handleOpenSprintModal()}
-                  className="mt-2 px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-2"
+                  className="mt-2 flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition"
                 >
                   <Plus size={16} /> Add Sprint
                 </button>
@@ -388,8 +355,8 @@ export default function ProjectDetailPage() {
           )}
         </div>
 
-        {/* Issues */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        {/* Issues Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <button
             onClick={() => setShowIssues(!showIssues)}
             className="w-full flex items-center justify-between text-xl font-semibold text-gray-800 mb-4"
@@ -399,60 +366,166 @@ export default function ProjectDetailPage() {
           </button>
 
           {showIssues && (
-            <div>
+            <div className="space-y-2">
               {issues.length === 0 ? (
                 <p className="text-gray-500 italic">No issues yet.</p>
               ) : (
                 issues.map((i) => (
                   <div
                     key={i.id}
-                    className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-gray-50"
+                    className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded hover:bg-gray-50 shadow-sm"
                   >
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium">{i.title}</span>
-                        <span className={`text-xs px-2 py-1 rounded ${getTypeColor(i.type)}`}>
-                          {i.type}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(i.priority)}`}>
-                          {i.priority}
+                        <span className={`text-xs px-2 py-1 rounded ${getTypeColor(i.type)}`}>{i.type}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(i.priority)}`}>{i.priority}</span>
+                        <span
+                          className={`text-xs px-2 py-1 rounded font-medium ${
+                            i.status === 'ACTIVE'
+                              ? 'bg-green-100 text-green-800'
+                              : i.status === 'PENDING'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          {i.status}
                         </span>
                       </div>
-                      {i.description && (
-                        <p className="text-sm text-gray-600">{i.description}</p>
-                      )}
+                      {i.description && <p className="text-sm text-gray-600">{i.description}</p>}
                     </div>
-                    <div className="flex gap-2 items-center">
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 items-center mt-2 md:mt-0">
+                      {/* Comments toggle */}
                       <button
-                        onClick={() => handleOpenIssueModal(i)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        onClick={async () => {
+                          if (activeCommentsIssueId === i.id) {
+                            setActiveCommentsIssueId(null);
+                          } else {
+                            setActiveCommentsIssueId(i.id);
+                            try {
+                              const commentsRes = await listComments(i.id);
+                              setComments(commentsRes);
+                            } catch {
+                              setToast('Failed to load comments');
+                            }
+                          }
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded text-blue-600"
+                        title="Comments"
                       >
-                        <MessageCircle size={16} /> Comments
+                        <MessageCircle size={16} />
                       </button>
+
                       {isAdmin && (
                         <>
                           <button
                             onClick={() => handleOpenIssueModal(i)}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="p-1 hover:bg-gray-200 rounded text-blue-600"
+                            title="Edit Issue"
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteIssue(i.id)}
-                            className="text-red-600 hover:text-red-800"
+                            className="p-1 hover:bg-gray-200 rounded text-red-600"
+                            title="Delete Issue"
                           >
                             <Trash2 size={16} />
                           </button>
                         </>
                       )}
                     </div>
+
+                    {/* Comments Section */}
+                    {activeCommentsIssueId === i.id && (
+                      <div className="mt-4 bg-gray-50 rounded p-3 space-y-2 border-t">
+                        {comments.map((c) => (
+                          <div
+                            key={c.id}
+                            className="flex justify-between items-start p-2 border-b last:border-b-0 rounded hover:bg-gray-100"
+                          >
+                            <div className="flex-1">
+                              <span className="font-medium text-sm">{c.user?.name || 'Unknown'}: </span>
+                              <span className="text-sm">{c.content}</span>
+                              <span className="text-xs text-gray-400 ml-2">
+                                {new Date(c.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+
+                            {(c.userId === project.userId || project.role === 'ADMIN') && (
+                              <div className="flex gap-1 ml-2">
+                                <button
+                                  onClick={async () => {
+                                    const newContent = prompt('Edit comment', c.content);
+                                    if (newContent && newContent !== c.content) {
+                                      try {
+                                        const updated = await updateComment(c.id, newContent);
+                                        setComments(
+                                          comments.map((com) =>
+                                            com.id === c.id ? updated : com
+                                          )
+                                        );
+                                      } catch {
+                                        setToast('Failed to update comment');
+                                      }
+                                    }
+                                  }}
+                                  className="p-1 hover:bg-gray-200 rounded text-blue-600"
+                                  title="Edit Comment"
+                                >
+                                  <Edit size={16} />
+                                </button>
+
+                                <button
+                                  onClick={async () => {
+                                    if (confirm('Delete this comment?')) {
+                                      try {
+                                        await deleteComment(c.id);
+                                        setComments(
+                                          comments.filter((com) => com.id !== c.id)
+                                        );
+                                      } catch {
+                                        setToast('Failed to delete comment');
+                                      }
+                                    }
+                                  }}
+                                  className="p-1 hover:bg-gray-200 rounded text-red-600"
+                                  title="Delete Comment"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Add Comment */}
+                        <div className="flex gap-2 mt-2">
+                          <input
+                            type="text"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            className="flex-1 p-2 border rounded"
+                            placeholder="Add comment"
+                          />
+                          <button
+                            onClick={handleAddComment}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+                          >
+                            <Plus size={14} /> Add
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
               {isAdmin && (
                 <button
                   onClick={() => handleOpenIssueModal()}
-                  className="mt-2 px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-2"
+                  className="mt-2 flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition"
                 >
                   <Plus size={16} /> Add Issue
                 </button>
@@ -464,10 +537,9 @@ export default function ProjectDetailPage() {
         {/* Sprint Modal */}
         {modalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4">
-                {editingSprintId ? 'Edit Sprint' : 'Create Sprint'}
-              </h2>
+            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+              <h2 className="text-xl font-bold mb-4">{editingSprintId ? 'Edit Sprint' : 'Create Sprint'}</h2>
+
               <label className="block mb-2 text-sm font-medium">Sprint Name</label>
               <input
                 type="text"
@@ -476,6 +548,7 @@ export default function ProjectDetailPage() {
                 className="w-full p-2 border rounded mb-4"
                 placeholder="Enter sprint name"
               />
+
               <label className="block mb-2 text-sm font-medium">Status</label>
               <div className="flex gap-2 mb-4">
                 {['PENDING', 'ACTIVE', 'COMPLETED'].map((s) => (
@@ -496,6 +569,7 @@ export default function ProjectDetailPage() {
                   </button>
                 ))}
               </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={() => setModalOpen(false)}
@@ -517,161 +591,58 @@ export default function ProjectDetailPage() {
         {/* Issue Modal */}
         {issueModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4">
-                {editingIssueId ? 'Edit Issue' : 'Create Issue'}
-              </h2>
+            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+              <h2 className="text-xl font-bold mb-4">{editingIssueId ? 'Edit Issue' : 'Create Issue'}</h2>
 
-              <label className="block mb-2 text-sm font-medium">Title *</label>
+              <label className="block mb-2 text-sm font-medium">Title</label>
               <input
                 type="text"
                 value={issueTitle}
                 onChange={(e) => setIssueTitle(e.target.value)}
                 className="w-full p-2 border rounded mb-4"
-                placeholder="Issue title"
               />
 
               <label className="block mb-2 text-sm font-medium">Description</label>
               <textarea
                 value={issueDescription}
                 onChange={(e) => setIssueDescription(e.target.value)}
-                className="w-full p-2 border rounded mb-4 min-h-[80px]"
-                placeholder="Describe the issue..."
+                className="w-full p-2 border rounded mb-4"
               />
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block mb-2 text-sm font-medium">Type</label>
-                  <select
-                    value={issueType}
-                    onChange={(e) => setIssueType(e.target.value as 'BUG' | 'FEATURE' | 'TASK')}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="TASK">Task</option>
-                    <option value="BUG">Bug</option>
-                    <option value="FEATURE">Feature</option>
-                  </select>
-                </div>
+              <div className="flex gap-2 mb-4">
+                <select
+                  value={issueType}
+                  onChange={(e) => setIssueType(e.target.value as any)}
+                  className="flex-1 p-2 border rounded"
+                >
+                  <option value="TASK">Task</option>
+                  <option value="FEATURE">Feature</option>
+                  <option value="BUG">Bug</option>
+                </select>
 
-                <div>
-                  <label className="block mb-2 text-sm font-medium">Priority</label>
-                  <select
-                    value={issuePriority}
-                    onChange={(e) => setIssuePriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
-                  </select>
-                </div>
+                <select
+                  value={issuePriority}
+                  onChange={(e) => setIssuePriority(e.target.value as any)}
+                  className="flex-1 p-2 border rounded"
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="CRITICAL">Critical</option>
+                </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block mb-2 text-sm font-medium">Status</label>
+              {editingIssueId && (
+                <div className="flex gap-2 mb-4">
                   <select
                     value={issueStatus}
-                    onChange={(e) => setIssueStatus(e.target.value as 'PENDING' | 'ACTIVE' | 'COMPLETED')}
-                    className="w-full p-2 border rounded"
+                    onChange={(e) => setIssueStatus(e.target.value as any)}
+                    className="flex-1 p-2 border rounded"
                   >
                     <option value="PENDING">Pending</option>
                     <option value="ACTIVE">Active</option>
                     <option value="COMPLETED">Completed</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="block mb-2 text-sm font-medium">Sprint</label>
-                  <select
-                    value={issueSprintId || ''}
-                    onChange={(e) => setIssueSprintId(e.target.value || null)}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="">No Sprint</option>
-                    {sprints.map((sprint) => (
-                      <option key={sprint.id} value={sprint.id}>
-                        {sprint.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {editingIssueId && (
-                <div className="mb-4">
-                  <h3 className="font-semibold mb-2">Comments</h3>
-                 <div className="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto mb-2">
-  {comments.map((c) => (
-    <div
-      key={c.id}
-      className="mb-2 pb-2 border-b last:border-b-0 flex justify-between items-start"
-    >
-      <div>
-        <span className="font-medium text-sm">{c.user?.name || 'Unknown'}: </span>
-        <span className="text-sm">{c.content}</span>
-        <span className="text-xs text-gray-400 ml-2">
-          {new Date(c.createdAt).toLocaleString()}
-        </span>
-      </div>
-
-      {/* Only author or admin can edit/delete */}
-      {(c.userId === project.userId || project.role === 'ADMIN') && (
-        <div className="flex gap-1 ml-2">
-          <button
-            onClick={async () => {
-              const newContent = prompt('Edit comment', c.content);
-              if (newContent && newContent !== c.content) {
-                try {
-                  const updated = await updateComment(c.id, newContent);
-                  setComments(comments.map((com) => (com.id === c.id ? updated : com)));
-                } catch (err: any) {
-                  setToast(err.response?.data?.message || 'Failed to update comment');
-                }
-              }
-            }}
-            className="text-blue-600 hover:text-blue-800 text-xs"
-          >
-            Edit
-          </button>
-          <button
-            onClick={async () => {
-              if (confirm('Delete this comment?')) {
-                try {
-                  await deleteComment(c.id);
-                  setComments(comments.filter((com) => com.id !== c.id));
-                } catch (err: any) {
-                  setToast(err.response?.data?.message || 'Failed to delete comment');
-                }
-              }
-            }}
-            className="text-red-600 hover:text-red-800 text-xs"
-          >
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
-  ))}
-</div>
-
-
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      className="flex-1 p-2 border rounded"
-                      placeholder="Add comment"
-                    />
-                    <button
-                      onClick={handleAddComment}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      Add
-                    </button>
-                  </div>
                 </div>
               )}
 
@@ -693,7 +664,6 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {/* Toast */}
         {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       </div>
     </div>

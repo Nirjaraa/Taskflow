@@ -7,6 +7,8 @@ import {
   Body,
   Req,
   UseGuards,
+  Delete,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -15,6 +17,7 @@ import {
   CreateWorkspaceDto,
   InviteMemberDto,
   UpdateMemberRoleDto,
+  DeleteWorkspaceDto
 } from './workspace.dto';
 import { RequireWorkspaceRole } from '../../common/decorators/workspace-role.decorator';
 import { WorkspaceMemberRole } from '@prisma/client';
@@ -89,4 +92,16 @@ inviteMember(
     );
 
   }
+
+   @Delete(':id')
+  async deleteWorkspace(
+    @Param('id', ParseIntPipe) workspaceId: number,
+    @Req() req: any,
+  ) {
+    const userId = req.user.id;
+    return this.workspaceService.deleteWorkspace(workspaceId, userId);
+  }
 }
+
+ 
+

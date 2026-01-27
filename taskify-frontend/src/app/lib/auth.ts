@@ -195,3 +195,17 @@ export const deleteComment = async (commentId: string) => {
   const res = await api.delete(`/comments/${commentId}`);
   return res.data;
 };
+
+export const deleteWorkspace = async (workspaceId: number) => {
+  try {
+     
+    await loadToken();
+
+     const res = await api.delete(`/workspaces/${workspaceId}`);
+
+     return res.data;
+  } catch (error: any) {
+    console.error('Error deleting workspace:', error);
+    throw error;  
+  }
+};

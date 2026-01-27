@@ -11,9 +11,10 @@ import {
   listProjects,
   createProject,   
   loadToken,
-  getMe 
+  getMe,
+  deleteWorkspace // Make sure this is exported from your auth/lib file
 } from '../../lib/auth';
-import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 
 export default function WorkspaceDetailPage() {
   const { workspaceId } = useParams();
@@ -21,6 +22,7 @@ export default function WorkspaceDetailPage() {
   const router = useRouter();
 
   const [confirm, setConfirm] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [currentUserRole, setCurrentUserRole] = useState<'ADMIN' | 'MEMBER' | 'GUEST'>('MEMBER');
   const [members, setMembers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -65,7 +67,7 @@ export default function WorkspaceDetailPage() {
   const loadMembersData = async () => {
     try {
       const res = await listMembers(id);
-      const memberList = res.data ?? res; // handle both structures
+      const memberList = res.data ?? res;
       setMembers(memberList);
 
       const meRes = await getMe();
@@ -85,7 +87,7 @@ export default function WorkspaceDetailPage() {
   const loadProjectsData = async () => {
     try {
       const res = await listProjects(id);
-      const projectList = res.data ?? res; // handle both structures
+      const projectList = res.data ?? res;
       setProjects(projectList);
     } catch (err: any) {
       console.error('Failed to load projects:', err);
@@ -153,13 +155,45 @@ export default function WorkspaceDetailPage() {
     }
   };
 
+  // ----------------------
+  // Delete Workspace
+  // ----------------------
+const handleDeleteWorkspace = async () => {
+  try {
+    await deleteWorkspace(id);
+    alert('Workspace deleted successfully!');
+    router.push('/workspaces');
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Failed to delete workspace');
+  }
+};
+
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <main className="flex-1 p-8 space-y-8">
-        <h1 className="text-3xl font-bold text-purple-700 mb-4">
-          Workspace #{id}
-        </h1>
+        {/* Workspace Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-purple-700 mb-4">
+            Workspace #{id}
+          </h1>
+          
+          {currentUserRole === 'ADMIN' && (
+            <button
+              className="flex items-center gap-1 text-red-600 font-medium"
+              onClick={() =>
+                setDeleteConfirm({
+                  title: 'Delete Workspace',
+                  description: 'Are you sure you want to delete this workspace? This action cannot be undone.',
+                  action: handleDeleteWorkspace,
+                })
+              }
+            >
+              <Trash2 size={16} /> Delete Workspace
+            </button>
+          )}
+        </div>
 
         {/* Projects */}
         <div>
@@ -298,7 +332,7 @@ export default function WorkspaceDetailPage() {
           )}
         </div>
 
-        {/* Confirm Modal */}
+        {/* Confirm Modals */}
         <ConfirmModal
           open={!!confirm}
           title={confirm?.title}
@@ -310,66 +344,71 @@ export default function WorkspaceDetailPage() {
           }}
         />
 
+        <ConfirmModal
+          open={!!deleteConfirm}
+          title={deleteConfirm?.title}
+          description={deleteConfirm?.description}
+          onCancel={() => setDeleteConfirm(null)}
+          onConfirm={() => {
+            deleteConfirm?.action();
+            setDeleteConfirm(null);
+          }}
+        />
+
         {/* Create Project Modal */}
-      {/* Create Project Modal */}
-{projectModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fadeIn">
-      {/* Modal Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-purple-700">Create Project</h3>
-        <button
-          onClick={() => setProjectModalOpen(false)}
-          className="text-gray-400 hover:text-gray-600 transition"
-        >
-          ✕
-        </button>
-      </div>
+        {projectModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fadeIn">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-purple-700">Create Project</h3>
+                <button
+                  onClick={() => setProjectModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  ✕
+                </button>
+              </div>
 
-      {/* Project Name */}
-      <div className="mb-4">
-        <label className="block text-gray-600 font-medium mb-1">Project Name</label>
-        <input
-          type="text"
-          placeholder="Enter project name"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 transition"
-          value={newProjectName}
-          onChange={(e) => setNewProjectName(e.target.value)}
-        />
-      </div>
+              <div className="mb-4">
+                <label className="block text-gray-600 font-medium mb-1">Project Name</label>
+                <input
+                  type="text"
+                  placeholder="Enter project name"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 transition"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                />
+              </div>
 
-      {/* Project Description */}
-      <div className="mb-4">
-        <label className="block text-gray-600 font-medium mb-1">Description (optional)</label>
-        <textarea
-          placeholder="Describe your project"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none transition"
-          rows={4}
-          value={newProjectDescription}
-          onChange={(e) => setNewProjectDescription(e.target.value)}
-        />
-      </div>
+              <div className="mb-4">
+                <label className="block text-gray-600 font-medium mb-1">Description (optional)</label>
+                <textarea
+                  placeholder="Describe your project"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none transition"
+                  rows={4}
+                  value={newProjectDescription}
+                  onChange={(e) => setNewProjectDescription(e.target.value)}
+                />
+              </div>
 
-      {/* Modal Actions */}
-      <div className="flex justify-end gap-3 mt-2">
-        <button
-          onClick={() => setProjectModalOpen(false)}
-          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleCreateProject}
-          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow hover:shadow-lg transition"
-        >
-          Create Project
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+              <div className="flex justify-end gap-3 mt-2">
+                <button
+                  onClick={() => setProjectModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateProject}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow hover:shadow-lg transition"
+                >
+                  Create Project
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-      
       </main>
     </div>
   );

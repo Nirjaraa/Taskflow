@@ -118,4 +118,25 @@ async listMembers(workspaceId: number) {
   });
 }
 
+
+
+
+async deleteWorkspace(workspaceId: number, userId: number) {
+   const workspace = await this.prisma.workspace.findUnique({
+    where: { id: workspaceId },
+  });
+
+  if (!workspace) {
+    throw new NotFoundException('Workspace not found');
+  }
+
+  if (workspace.ownerId !== userId) {
+    throw new ForbiddenException('Only the owner can delete the workspace');
+  }
+
+  // 2️⃣ Delete the workspace (cascade deletes members if configured in Prisma)
+  return this.prisma.workspace.delete({
+    where: { id: workspaceId },
+  });
+}
 }

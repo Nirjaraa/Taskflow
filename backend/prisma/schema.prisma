@@ -38,7 +38,7 @@ model Workspace {
   urlSlug  String            @unique
 
   owner    User              @relation(fields: [ownerId], references: [id])
-  members  WorkspaceMember[]
+  members  WorkspaceMember[]  
   projects Project[]
   issues   Issue[]            
 }
@@ -60,12 +60,13 @@ model WorkspaceMember {
   userId      Int
   role        WorkspaceMemberRole @default(MEMBER)
   status      InviteStatus        @default(PENDING)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  
+   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id])  
   joinedAt    DateTime @default(now())
+
   @@unique([workspaceId, userId]) 
 }
-
 model Project {
   id          String   @id @default(uuid())
   workspaceId Int
