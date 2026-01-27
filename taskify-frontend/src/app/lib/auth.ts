@@ -208,4 +208,12 @@ export const deleteWorkspace = async (workspaceId: number) => {
     console.error('Error deleting workspace:', error);
     throw error;  
   }
+
+  
+};
+
+export const acceptInvite = async (workspaceId: number) => {
+  await loadToken();
+  const res = await api.post(`/workspaces/${workspaceId}/accept-invite`);
+  return res.data;
 };

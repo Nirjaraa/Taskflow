@@ -101,6 +101,15 @@ inviteMember(
     const userId = req.user.id;
     return this.workspaceService.deleteWorkspace(workspaceId, userId);
   }
+
+   @Post(':id/accept-invite')
+  async acceptInvite(
+    @Param('id', ParseIntPipe) workspaceId: number,
+    @Req() req: any, 
+  ) {
+    const userId = req.user.id;
+    return this.workspaceService.acceptInvite(workspaceId, userId);
+  }
 }
 
  

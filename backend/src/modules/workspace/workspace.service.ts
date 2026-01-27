@@ -139,4 +139,20 @@ async deleteWorkspace(workspaceId: number, userId: number) {
     where: { id: workspaceId },
   });
 }
+
+async acceptInvite(workspaceId: number, userId: number) {
+    const member = await this.prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } },
+    });
+
+    if (!member) throw new NotFoundException('Invitation not found');
+    if (member.status === 'ACCEPTED') throw new ForbiddenException('Already accepted');
+
+    const updated = await this.prisma.workspaceMember.update({
+      where: { workspaceId_userId: { workspaceId, userId } },
+      data: { status: 'ACCEPTED' },
+    });
+
+    return updated;
+  }
 }
