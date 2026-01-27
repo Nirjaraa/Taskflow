@@ -1,100 +1,182 @@
- # TaskFlow API
+# TaskFlow – Full Stack Project Management System
 
-TaskFlow is a robust backend API for a project management system inspired by Jira.  
-Built with  **TypeScript**, **NestJS**, and **PostgreSQL**, it provides essential features for **issue tracking**, **agile sprint planning**, and **team collaboration**.
+TaskFlow is a **full‑stack project management application** inspired by Jira.
+It includes a powerful **backend API** and a modern **frontend web application** for managing workspaces, projects, sprints, issues, and team collaboration.
 
----
-
-## Features
-
-- User registration, login, and profile management
-- JWT authentication
-- Workspace management
-  - Create workspaces
-  - Invite members
-  - Role-based access (Guest, Member, Admin)
-- Project management
-  - Create projects within workspaces
-  - Assign issues to projects
-- Issue tracking
-  - Create, update, and delete issues
-  - Assign users and set priorities
-  - Sprint planning
-- Comments
-  - Add, update, delete comments on issues
-  - Role-based access control for comments
+Built with **NestJS**, **TypeScript**, **PostgreSQL**, and a **modern React-based frontend**, TaskFlow supports agile workflows, role‑based access, and real‑time‑ready architecture.
 
 ---
 
-## Tech Stack
+## ✨ Features
 
-- **Backend:** Node.js, NestJS, TypeScript  
-- **Database:** PostgreSQL with Prisma ORM  
-- **Authentication:** JWT via Passport.js  
-- **Validation:** class-validator  
-- **API Docs:** Swagger
+### 🔐 Authentication & Users
 
----
+* User registration and login
+* JWT-based authentication
+* Profile management
+* Secure password reset flow
 
-## API Structure
+### 🏢 Workspace Management
 
-- **Auth**
-  - `POST /auth/register` – Register a new user
-  - `POST /auth/login` – Login
-  - `GET /auth/me` – Get current user profile
-  - `PATCH /auth/profile` – Update profile
-  - `POST /auth/forgot-password` – Request password reset
-  - `POST /auth/reset-password` – Reset password
+* Create multiple workspaces
+* Invite team members
+* Role-based access control
 
-- **Workspaces**
-  - `POST /workspaces` – Create workspace
-  - `GET /workspaces` – List workspaces
-  - `GET /workspaces/:id/members` – List workspace members
-  - `POST /workspaces/:id/members/invite` – Invite a member
-  - `PATCH /workspaces/:id/members/:userId/role` – Update member role
+  * Guest
+  * Member
+  * Admin
 
-- **Projects & Issues**
-  - `GET /api/projects/:projectId/issues` – List issues
-  - `POST /api/issues?projectId=<uuid>` – Create issue
-  - `PATCH /api/issues/:issueId` – Update issue
-  - `DELETE /api/issues/:issueId` – Delete issue
+### 📁 Project & Issue Management
 
-- **Sprints**
-  - `POST /sprints` – Create sprint
-  - `PATCH /sprints/:sprintId` – Update sprint (start/complete)
+* Create projects within workspaces
+* Create, update, and delete issues
+* Assign issues to users
+* Set priorities and statuses
+* Agile sprint planning
 
-- **Comments**
-  - `GET /comments/issue/:issueId` – List comments for issue
-  - `POST /comments` – Create comment
-  - `PATCH /comments/:commentId` – Update comment
-  - `DELETE /comments/:commentId` – Delete comment
+### 🏃 Sprint Management
 
----
+* Create sprints
+* Start and complete sprints
+* Assign issues to sprints
 
-## Role-Based Access
+### 💬 Comments & Collaboration
 
-- **Guest** – Can view issues/comments if added to workspace  
-- **Member** – Can create/update issues and comments  
-- **Admin** – Full control including inviting members, updating roles, deleting issues/comments
+* Add comments to issues
+* Update and delete comments
+* Permission-based access for comments
+
+### 🌐 Frontend (Integrated)
+
+* Modern responsive UI
+* Workspace and project dashboards
+* Issue boards (Kanban-style)
+* Sprint views
+* Secure authentication flow
+* API-driven state management
 
 ---
 
-## Installation
+## 🛠 Tech Stack
+
+### Backend
+
+* **Node.js**
+* **NestJS**
+* **TypeScript**
+* **PostgreSQL**
+* **Prisma ORM**
+* **JWT + Passport.js**
+* **Swagger API Docs**
+
+### Frontend
+
+* **Next JS**  
+* **TypeScript**
+* **API integration with Axios **
+* **Responsive UI design**
+
+---
+
+## 📦 Project Structure
+
+```
+taskflow/
+├── backend/
+│   ├── src/
+│   ├── prisma/
+│   └── package.json
+│
+├── taskify-frontend/
+│   ├── src/
+│   ├── public/
+│   └── package.json
+│
+└── README.md
+```
+
+---
+
+## 🔌 API Endpoints Overview
+
+### Auth
+
+* `POST /auth/register` – Register user
+* `POST /auth/login` – Login
+* `GET /auth/me` – Current user
+* `PATCH /auth/profile` – Update profile
+* `POST /auth/forgot-password` – Request reset
+* `POST /auth/reset-password` – Reset password
+
+### Workspaces
+
+* `POST /workspaces` – Create workspace
+* `GET /workspaces` – List workspaces
+* `GET /workspaces/:id/members` – Members
+* `POST /workspaces/:id/members/invite` – Invite member
+* `PATCH /workspaces/:id/members/:userId/role` – Update role
+
+### Projects & Issues
+
+* `GET /projects/:projectId/issues` – List issues
+* `POST /issues?projectId=<uuid>` – Create issue
+* `PATCH /issues/:issueId` – Update issue
+* `DELETE /issues/:issueId` – Delete issue
+
+### Sprints
+
+* `POST /sprints` – Create sprint
+* `PATCH /sprints/:sprintId` – Start / complete sprint
+
+### Comments
+
+* `GET /comments/issue/:issueId` – List comments
+* `POST /comments` – Add comment
+* `PATCH /comments/:commentId` – Update comment
+* `DELETE /comments/:commentId` – Delete comment
+
+---
+
+## 🧑‍🤝‍🧑 Role-Based Access Control
+
+* **Guest** – View issues and comments
+* **Member** – Create/update issues and comments
+* **Admin** – Full control (roles, invites, deletion)
+
+---
+
+## 🚀 Installation & Setup
+
+### Backend Setup
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-
-# Install dependencies
+cd backend
 npm install
-
-# Run migrations
 npx prisma migrate dev
-
-# Start the server
 npm run start:dev
-## API Documentation
+```
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend will run on its own development server and communicate with the backend API.
+
+---
+
+## 📘 API Documentation
 
 Swagger UI is available at:
 
-[http://localhost:3000/api]
+```
+http://localhost:3000/api
+```
+
+---
+
+ d
+ 
