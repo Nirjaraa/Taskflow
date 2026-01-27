@@ -158,81 +158,82 @@ export default function WorkspacesPage() {
           </button>
 
           {showCreate && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative">
-                <button
-                  onClick={() => setShowCreate(false)}
-                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-                <h2 className="text-2xl font-bold text-purple-700 mb-4">Create Workspace</h2>
+  <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fadeIn">
+      <button
+        onClick={() => setShowCreate(false)}
+        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition"
+      >
+        ✕
+      </button>
+      <h2 className="text-2xl font-bold text-purple-700 mb-4">Create Workspace</h2>
 
-                <input
-                  type="text"
-                  placeholder="Workspace Name"
-                  value={workspaceName}
-                  onChange={e => setWorkspaceName(e.target.value)}
-                  className="border rounded p-2 w-full mb-2 focus:ring-2 focus:ring-purple-400"
-                />
+      <input
+        type="text"
+        placeholder="Workspace Name"
+        value={workspaceName}
+        onChange={e => setWorkspaceName(e.target.value)}
+        className="border rounded p-2 w-full mb-2 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+      />
 
-                <input
-                  type="text"
-                  placeholder="Workspace URL Slug (unique)"
-                  value={workspaceSlug}
-                  onChange={e => setWorkspaceSlug(e.target.value)}
-                  className="border rounded p-2 w-full mb-2 focus:ring-2 focus:ring-purple-400"
-                />
+      <input
+        type="text"
+        placeholder="Workspace URL Slug (unique)"
+        value={workspaceSlug}
+        onChange={e => setWorkspaceSlug(e.target.value)}
+        className="border rounded p-2 w-full mb-2 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+      />
 
-                {/* Invite Members */}
-                <div>
-                  <h3 className="font-semibold mb-2">Invite Members</h3>
-                  <div className="space-y-2">
-                    {invites.map((inv, i) => (
-                      <div key={i} className="flex gap-2 items-center">
-                        <input
-                          type="email"
-                          placeholder="Email"
-                          value={inv.email}
-                          onChange={e => updateInviteField(i, 'email', e.target.value)}
-                          className="border p-2 rounded flex-1 focus:ring-2 focus:ring-purple-400"
-                        />
-                        <select
-                          value={inv.role}
-                          onChange={e => updateInviteField(i, 'role', e.target.value)}
-                          className="border p-2 rounded focus:ring-2 focus:ring-purple-400"
-                        >
-                          <option value="GUEST">Guest</option>
-                          <option value="MEMBER">Member</option>
-                          <option value="ADMIN">Admin</option>
-                        </select>
-                        <button
-                          onClick={() => removeInviteField(i)}
-                          className="text-red-500 font-bold"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
-
-                    <button
-                      onClick={addInviteField}
-                      className="text-purple-700 font-semibold hover:text-purple-800"
-                    >
-                      + Add Invite
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleCreateWorkspace}
-                  className="mt-4 w-full bg-purple-600 text-white px-5 py-2 rounded hover:bg-purple-700 font-semibold"
-                >
-                  Save Workspace
-                </button>
-              </div>
+      {/* Invite Members */}
+      <div className="mb-4">
+        <h3 className="font-semibold mb-2">Invite Members</h3>
+        <div className="space-y-2">
+          {invites.map((inv, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <input
+                type="email"
+                placeholder="Email"
+                value={inv.email}
+                onChange={e => updateInviteField(i, 'email', e.target.value)}
+                className="border p-2 rounded flex-1 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+              />
+              <select
+                value={inv.role}
+                onChange={e => updateInviteField(i, 'role', e.target.value)}
+                className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+              >
+                <option value="GUEST">Guest</option>
+                <option value="MEMBER">Member</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+              <button
+                onClick={() => removeInviteField(i)}
+                className="text-red-500 font-bold"
+              >
+                <X size={16} />
+              </button>
             </div>
-          )}
+          ))}
+
+          <button
+            onClick={addInviteField}
+            className="text-purple-700 font-semibold hover:text-purple-800 transition"
+          >
+            + Add Invite
+          </button>
+        </div>
+      </div>
+
+      <button
+        onClick={handleCreateWorkspace}
+        className="mt-4 w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white px-5 py-2 rounded-lg shadow hover:shadow-lg font-semibold transition"
+      >
+        Save Workspace
+      </button>
+    </div>
+  </div>
+)}
+
         </div>
       </main>
     </div>
