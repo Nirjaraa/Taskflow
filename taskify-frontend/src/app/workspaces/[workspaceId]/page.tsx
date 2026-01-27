@@ -1,22 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import ConfirmModal from '../../components/ConfirmModal';
-import {
+import { 
   listMembers,
   inviteMember,
   updateMemberRole,
   listProjects,
+  createProject,  // ✅ updated
   loadToken,
-  getMe,
+  getMe 
 } from '../../lib/auth';
-import { ChevronDown, ChevronUp, Plus } from 'lucide-react';  
+import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 
 export default function WorkspaceDetailPage() {
   const { workspaceId } = useParams();
   const id = Number(workspaceId);
+  const router = useRouter();
 
   const [confirm, setConfirm] = useState<any>(null);
   const [currentUserRole, setCurrentUserRole] = useState<'ADMIN' | 'MEMBER' | 'GUEST'>('MEMBER');
@@ -28,91 +30,132 @@ export default function WorkspaceDetailPage() {
   const [membersExpanded, setMembersExpanded] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  // Trigger confirm modal when a role change is selected
-  useEffect(() => {
-    if (pendingRoleChange) {
-      const targetMember = members.find(m => (m.user?.id ?? m.userId) === pendingRoleChange.userId);
-      if (!targetMember || targetMember.status === 'PENDING') {
-        alert('Cannot change role of a pending member.');
-        setPendingRoleChange(null);
-        return;
-      }
+  // --- Create Project modal ---
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
 
-      setConfirm({
-        title: 'Change Role',
-        description: `Change role of ${targetMember.user?.email ?? 'User'} to ${pendingRoleChange.newRole}?`,
-        action: async () => {
-          await handleRoleUpdate(pendingRoleChange.userId, pendingRoleChange.newRole);
-          setPendingRoleChange(null);
-        },
-      });
+  // ----------------------
+  // Confirm modal for role change
+  // ----------------------
+  useEffect(() => {
+    if (!pendingRoleChange) return;
+
+    const targetMember = members.find(m => (m.user?.id ?? m.userId) === pendingRoleChange.userId);
+
+    if (!targetMember || targetMember.status === 'PENDING') {
+      alert('Cannot change role of a pending member.');
+      setPendingRoleChange(null);
+      return;
     }
+
+    setConfirm({
+      title: 'Change Role',
+      description: `Change role of ${targetMember.user?.email ?? 'User'} to ${pendingRoleChange.newRole}?`,
+      action: async () => {
+        await handleRoleUpdate(pendingRoleChange.userId, pendingRoleChange.newRole);
+        setPendingRoleChange(null);
+      },
+    });
   }, [pendingRoleChange, members]);
 
-  // Load members
-  const loadMembers = async () => {
+  // ----------------------
+  // Load members & current user role
+  // ----------------------
+  const loadMembersData = async () => {
     try {
       const res = await listMembers(id);
-      setMembers(res.data);
+      const memberList = res.data ?? res; // handle both structures
+      setMembers(memberList);
 
       const meRes = await getMe();
       const currentUserId = meRes.data.id;
 
-      const meMember = res.data.find((m: any) => m.user?.id === currentUserId);
+      const meMember = memberList.find((m: any) => m.user?.id === currentUserId);
       if (meMember) setCurrentUserRole(meMember.role);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load members:', err);
+      if (err.response?.status === 401) router.replace('/login');
     }
   };
 
+  // ----------------------
   // Load projects
-  const loadProjects = async () => {
+  // ----------------------
+  const loadProjectsData = async () => {
     try {
       const res = await listProjects(id);
-      setProjects(res.data);
-    } catch (err) {
+      const projectList = res.data ?? res; // handle both structures
+      setProjects(projectList);
+    } catch (err: any) {
       console.error('Failed to load projects:', err);
+      if (err.response?.status === 401) router.replace('/login');
     }
   };
 
+  // ----------------------
+  // Initialize: load token, members, projects
+  // ----------------------
   useEffect(() => {
-    loadToken();
-    loadMembers();
-    loadProjects();
+    loadToken(); // ensure Authorization header is set
+
+    const init = async () => {
+      await Promise.all([loadMembersData(), loadProjectsData()]);
+    };
+    init();
   }, [id]);
 
+  // ----------------------
   // Invite new member
+  // ----------------------
   const handleInvite = async () => {
+    if (!email.trim()) return alert('Email is required');
     try {
       await inviteMember(id, { email, role });
       setEmail('');
       setRole('MEMBER');
       setInviteOpen(false);
-      await loadMembers();
-    } catch (err) {
+      await loadMembersData();
+    } catch (err: any) {
       console.error('Failed to invite member:', err);
+      alert(err?.response?.data?.message || 'Failed to invite');
     }
   };
 
+  // ----------------------
   // Update member role
+  // ----------------------
   const handleRoleUpdate = async (userId: number, newRole: 'ADMIN' | 'MEMBER' | 'GUEST') => {
-    setMembers(prev =>
-      prev.map(m => (m.user?.id ?? m.userId) === userId ? { ...m, role: newRole } : m)
-    );
-
+    setMembers(prev => prev.map(m => (m.user?.id ?? m.userId) === userId ? { ...m, role: newRole } : m));
     try {
       await updateMemberRole(id, userId, newRole);
-      await loadMembers();
+      await loadMembersData();
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Failed to update role');
-      await loadMembers(); // rollback
+      await loadMembersData(); // rollback
+    }
+  };
+
+  // ----------------------
+  // Create Project
+  // ----------------------
+  const handleCreateProject = async () => {
+    if (!newProjectName.trim()) return alert('Project name is required');
+    try {
+      await createProject(id, { name: newProjectName, description: newProjectDescription });
+      setNewProjectName('');
+      setNewProjectDescription('');
+      setProjectModalOpen(false);
+      await loadProjectsData();
+    } catch (err: any) {
+      console.error('Failed to create project:', err);
+      alert(err?.response?.data?.message || 'Failed to create project');
     }
   };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-
       <main className="flex-1 p-8 space-y-8">
         <h1 className="text-3xl font-bold text-purple-700 mb-4">
           Workspace #{id}
@@ -120,10 +163,25 @@ export default function WorkspaceDetailPage() {
 
         {/* Projects */}
         <div>
-          <h2 className="text-2xl font-semibold mb-2">Projects</h2>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-2xl font-semibold">Projects</h2>
+            {currentUserRole === 'ADMIN' && (
+              <button
+                className="flex items-center gap-1 text-purple-600 font-medium"
+                onClick={() => setProjectModalOpen(true)}
+              >
+                <Plus size={16} /> Create Project
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map(p => (
-              <div key={p.id} className="bg-white p-4 rounded-lg shadow hover:shadow-lg border">
+              <div
+                key={p.id}
+                className="bg-white p-4 rounded-lg shadow hover:shadow-lg border cursor-pointer"
+                onClick={() => router.push(`/workspaces/${id}/${p.id}`)}
+              >
                 <h3 className="font-semibold text-lg text-purple-700">{p.name}</h3>
                 <p className="text-gray-500 text-sm">{p.description || 'No description'}</p>
               </div>
@@ -203,7 +261,6 @@ export default function WorkspaceDetailPage() {
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{m.user?.email ?? `User #${userId}`}</span>
-
                       <div className="flex items-center gap-2 mt-1">
                         <span
                           className={`px-2 py-0.5 rounded text-sm font-medium ${
@@ -252,6 +309,43 @@ export default function WorkspaceDetailPage() {
             setConfirm(null);
           }}
         />
+
+        {/* Create Project Modal */}
+        {projectModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded shadow w-96">
+              <h3 className="text-lg font-semibold mb-4">Create Project</h3>
+              <input
+                type="text"
+                placeholder="Project Name"
+                className="w-full border px-2 py-1 rounded mb-3"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+              />
+              <textarea
+                placeholder="Project Description (optional)"
+                className="w-full border px-2 py-1 rounded mb-4"
+                value={newProjectDescription}
+                onChange={(e) => setNewProjectDescription(e.target.value)}
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                  onClick={() => setProjectModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                  onClick={handleCreateProject}
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );

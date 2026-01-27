@@ -15,12 +15,12 @@ export class CreateProjectDto {
   name: string;
 
   @ApiProperty({
-    description: 'Unique project key within the workspace',
+    description: 'Unique project key',
     example: 'FE',
   })
   @IsString()
   @IsNotEmpty()
-  
+  key: string;
 
   @ApiPropertyOptional({
     description: 'Optional project description',

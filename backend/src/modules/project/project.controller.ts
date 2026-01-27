@@ -17,7 +17,6 @@ import { RequireWorkspaceRole } from '../../common/decorators/workspace-role.dec
 import { WorkspaceMemberRole } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
-const key = uuidv4();  
 @ApiTags('Projects')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'))
@@ -25,18 +24,25 @@ const key = uuidv4();
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
+  // ✅ Create Project (ADMIN only)
+  @Post()
+  @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN)
+  async create(@Req() req: any, @Body() dto: CreateProjectDto) {
+    const key = dto.key || uuidv4();
+    return this.projectService.create(req.user.id, {
+      ...dto,
+      key,
+    });
+  }
 
-  // ✅ List Projects (ALL roles)
+  // ✅ List Projects
   @Get('/workspace/:workspaceId')
   @RequireWorkspaceRole(
     WorkspaceMemberRole.ADMIN,
     WorkspaceMemberRole.MEMBER,
     WorkspaceMemberRole.GUEST,
   )
-  findAll(
-    @Req() req: any,
-    @Param('workspaceId') workspaceId: number,
-  ) {
+  findAll(@Req() req: any, @Param('workspaceId') workspaceId: number) {
     return this.projectService.findAll(req.user.id, workspaceId);
   }
 
@@ -47,34 +53,21 @@ export class ProjectController {
     WorkspaceMemberRole.MEMBER,
     WorkspaceMemberRole.GUEST,
   )
-  findOne(
-    @Req() req: any,
-    @Param('projectId') projectId: string,
-  ) {
+  findOne(@Req() req: any, @Param('projectId') projectId: string) {
     return this.projectService.findOne(req.user.id, projectId);
   }
 
-  // ✅ Update Project (ADMIN, MEMBER)
+  // ✅ Update Project
   @Patch(':projectId')
-  @RequireWorkspaceRole(
-    WorkspaceMemberRole.ADMIN,
-    WorkspaceMemberRole.MEMBER,
-  )
-  update(
-    @Req() req: any,
-    @Param('projectId') projectId: string,
-    @Body() dto: UpdateProjectDto,
-  ) {
+  @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN, WorkspaceMemberRole.MEMBER)
+  update(@Req() req: any, @Param('projectId') projectId: string, @Body() dto: UpdateProjectDto) {
     return this.projectService.update(req.user.id, projectId, dto);
   }
 
-  // ✅ Delete Project (ADMIN only)
+  // ✅ Delete Project
   @Delete(':projectId')
   @RequireWorkspaceRole(WorkspaceMemberRole.ADMIN)
-  remove(
-    @Req() req: any,
-    @Param('projectId') projectId: string,
-  ) {
+  remove(@Req() req: any, @Param('projectId') projectId: string) {
     return this.projectService.remove(req.user.id, projectId);
   }
 }

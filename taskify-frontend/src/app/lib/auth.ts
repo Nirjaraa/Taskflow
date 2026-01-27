@@ -79,3 +79,41 @@ export const inviteMember = (
   // List projects in a workspace
 export const listProjects = (workspaceId: number) =>
   api.get(`/project/workspace/${workspaceId}`);
+
+export const getProject = async (_workspaceId: string, projectId: string) => {
+  const res = await api.get(`/project/${projectId}`);
+  return res.data;
+};
+
+export const deleteProject = async (projectId: string) => {
+  const res = await api.delete(`/project/${projectId}`);
+  return res.data;
+};
+
+export const listSprints = async (projectId: string) => {
+  const res = await api.get(`/api/projects/${projectId}/sprints`);
+  return res.data;
+};
+
+export const createSprint = async (projectId: string, dto: { name: string }) => {
+  const res = await api.post(`/api/projects/${projectId}/sprints`, dto);
+  return res.data;
+};
+
+export const updateSprint = async (sprintId: string, dto: { name?: string; status?: string }) => {
+  const res = await api.patch(`/api/sprints/${sprintId}`, dto);
+  return res.data;
+};
+
+export const deleteSprint = async (sprintId: string) => {
+  const res = await api.delete(`/api/sprints/${sprintId}`);
+  return res.data;
+};
+
+export const createProject = (workspaceId: number, data: { name: string; description?: string }) =>
+  api.post('/project', {
+    workspaceId,
+    name: data.name,
+    description: data.description || '',
+  });
+
